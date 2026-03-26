@@ -1,0 +1,13 @@
+# This repository is a Next.js (Node.js) app, not a Python app.
+# There are no Python package dependencies required to run it.
+#
+# Runtime requirements for contributors cloning this repo:
+# - Node.js 20+
+# - npm 10+
+# - PostgreSQL connection string in .env.local (DATABASE_URL)
+#
+# Quick start after clone:
+# 1) npm install --legacy-peer-deps
+# 2) npx prisma generate
+# 3) npx prisma db push
+# 4) npm run dev

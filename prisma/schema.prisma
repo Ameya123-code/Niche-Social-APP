@@ -1,0 +1,233 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User Model
+model User {
+  id                    String    @id @default(cuid())
+  email                 String    @unique
+  phone                 String    @unique
+  name                  String
+  age                   Int
+  password              String    // Hashed password
+  isEmailVerified       Boolean   @default(false)
+  isPhoneVerified       Boolean   @default(false)
+  isAgeVerified         Boolean   @default(false)
+  selfDescription       String?
+  profileImageUrl       String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  lastPhotosBlockedAt   DateTime?
+
+  // Relations
+  preferences           UserPreferences?
+  opinions              UserOpinion[]
+  eventsCreated         Event[]         @relation("creator")
+  eventsAttending       EventAttendee[]
+  ratingsGiven          EventRating[]
+  organizerRatingsGiven OrganizerRating[]
+  userRatingsGiven      UserBehaviorRating[] @relation("rater")
+  userRatingsReceived   UserBehaviorRating[] @relation("rated")
+  reportsCreated        Report[]        @relation("reporter")
+  reportsReceived       Report[]        @relation("reported")
+  likes                 UserLike[]
+  verificationTokens    VerificationToken[]
+
+  @@index([email])
+  @@index([createdAt])
+}
+
+model VerificationToken {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       String   // EMAIL_VERIFY | PHONE_VERIFY | PASSWORD_RESET
+  code       String
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, type])
+  @@index([expiresAt])
+}
+
+model UploadedImage {
+  id        String   @id @default(cuid())
+  fileName  String
+  mimeType  String
+  sizeBytes Int
+  data      Bytes
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// User Preferences (Algorithm matching)
+model UserPreferences {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  music     String   @default("[]") // JSON array stored as string
+  hobbies   String   @default("[]")
+  movies    String   @default("[]")
+  books     String   @default("[]")
+  popCulture String  @default("[]")
+  education String   @default("[]")
+  career    String   @default("[]")
+  
+  @@index([userId])
+}
+
+// User Opinions (About events or current/past topics)
+model UserOpinion {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content          String
+  hashtags         String   @default("[]") // JSON array
+  eventId          String?
+  event            Event?   @relation(fields: [eventId], references: [id])
+  isAboutPastEvent Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  likes            Int      @default(0)
+  
+  @@index([userId])
+  @@index([eventId])
+  @@index([createdAt])
+}
+
+// Event Model
+model Event {
+  id              String   @id @default(cuid())
+  creatorId       String
+  creator         User     @relation("creator", fields: [creatorId], references: [id], onDelete: Cascade)
+  title           String
+  description     String
+  category        String   // "music", "food", "fitness", "art", etc.
+  latitude        Float
+  longitude       Float
+  address         String
+  city            String
+  startDate       DateTime
+  endDate         DateTime
+  hashtags        String   @default("[]") // JSON array
+  maxAttendees    Int?
+  isPersonal      Boolean  @default(false)
+  discountPercent Int?     @default(0)
+  coverImageUrl   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  attendees       EventAttendee[]
+  ratings         EventRating[]
+  opinions        UserOpinion[]
+
+  @@index([creatorId])
+  @@index([latitude, longitude])
+  @@index([startDate])
+  @@index([city])
+}
+
+// Event Attendees (Many-to-many)
+model EventAttendee {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime @default(now())
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+}
+
+// User Likes (For card swiping)
+model UserLike {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likedUserId String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, likedUserId])
+  @@index([userId])
+}
+
+// Event Rating
+model EventRating {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int      // 1-5
+  review    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+}
+
+// Organizer Rating
+model OrganizerRating {
+  id          String   @id @default(cuid())
+  organizerId String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating      Int      // 1-5
+  review      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([organizerId, userId])
+  @@index([organizerId])
+  @@index([userId])
+}
+
+// User Behavior Rating
+model UserBehaviorRating {
+  id         String   @id @default(cuid())
+  ratedUserId String
+  ratedUser  User     @relation("rated", fields: [ratedUserId], references: [id], onDelete: Cascade)
+  raterUserId String
+  rater      User     @relation("rater", fields: [raterUserId], references: [id], onDelete: Cascade)
+  rating     Int      // 1-5
+  behavior   String
+  isFlagged  Boolean  @default(false)
+  flagReason String?
+  createdAt  DateTime @default(now())
+
+  @@unique([ratedUserId, raterUserId])
+  @@index([ratedUserId])
+  @@index([isFlagged])
+}
+
+// User Report
+model Report {
+  id             String   @id @default(cuid())
+  reportedUserId String
+  reported       User     @relation("reported", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  reporterUserId String
+  reporter       User     @relation("reporter", fields: [reporterUserId], references: [id], onDelete: Cascade)
+  reason         String   // "harassment", "spam", "inappropriate", etc.
+  description    String
+  severity       String   @default("medium") // "low", "medium", "high"
+  status         String   @default("open") // "open", "investigating", "resolved", "dismissed"
+  createdAt      DateTime @default(now())
+  resolvedAt     DateTime?
+
+  @@index([reportedUserId])
+  @@index([status])
+  @@index([severity])
+}
