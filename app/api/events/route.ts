@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
-    const search = searchParams.get('search') ?? '';
+    const search = searchParams.get('search') ?? searchParams.get('q') ?? '';
 
     const events = await prisma.event.findMany({
       where: {
@@ -19,28 +19,43 @@ export async function GET(request: NextRequest) {
           OR: [
             { title: { contains: search } },
             { description: { contains: search } },
-            { location: { contains: search } },
+            { address: { contains: search } },
+            { city: { contains: search } },
           ],
         }),
       },
-      orderBy: { date: 'asc' },
+      orderBy: { startDate: 'asc' },
       take: 50,
       select: {
         id: true,
         title: true,
         description: true,
-        location: true,
-        date: true,
+        address: true,
+        city: true,
+        startDate: true,
+        endDate: true,
         category: true,
         maxAttendees: true,
-        imageUrl: true,
+        coverImageUrl: true,
+        hashtags: true,
         createdAt: true,
         creator: { select: { id: true, name: true, profileImageUrl: true } },
-        _count: { select: { attendees: true } },
+        _count: { select: { attendees: true, ratings: true } },
       },
     });
 
-    return NextResponse.json({ events }, { status: 200 });
+    return NextResponse.json(
+      {
+        events: events.map((event) => ({
+          ...event,
+          // Backward-compatible aliases for older client code
+          location: event.address,
+          date: event.startDate,
+          imageUrl: event.coverImageUrl,
+        })),
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('GET /api/events error:', error);
     return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
@@ -54,38 +69,77 @@ export async function POST(request: NextRequest) {
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
-    const { title, description, location, date, category, maxAttendees, imageUrl } = body;
+    const {
+      title,
+      description,
+      location,
+      address,
+      city,
+      date,
+      startDate,
+      endDate,
+      category,
+      maxAttendees,
+      imageUrl,
+      coverImageUrl,
+      latitude,
+      longitude,
+    } = body;
 
-    if (!title || !location || !date || !category) {
-      return NextResponse.json({ error: 'Title, location, date, and category are required' }, { status: 400 });
+    const normalizedAddress = String(address || location || '').trim();
+    const normalizedCity = String(city || normalizedAddress.split(',').pop() || '').trim();
+    const normalizedStartDate = new Date(startDate || date);
+    const normalizedEndDate = endDate
+      ? new Date(endDate)
+      : new Date(normalizedStartDate.getTime() + 2 * 60 * 60 * 1000);
+
+    if (!title || !normalizedAddress || Number.isNaN(normalizedStartDate.getTime()) || !category) {
+      return NextResponse.json({ error: 'Title, location/date, and category are required' }, { status: 400 });
     }
 
     const event = await prisma.event.create({
       data: {
         title,
         description: description ?? '',
-        location,
-        date: new Date(date),
+        latitude: typeof latitude === 'number' ? latitude : 0,
+        longitude: typeof longitude === 'number' ? longitude : 0,
+        address: normalizedAddress,
+        city: normalizedCity || 'Unknown',
+        startDate: normalizedStartDate,
+        endDate: normalizedEndDate,
         category,
         maxAttendees: maxAttendees ? Number(maxAttendees) : null,
-        imageUrl: imageUrl ?? null,
+        coverImageUrl: coverImageUrl ?? imageUrl ?? null,
         creatorId: authUser.userId,
       },
       select: {
         id: true,
         title: true,
         description: true,
-        location: true,
-        date: true,
+        address: true,
+        city: true,
+        startDate: true,
+        endDate: true,
         category: true,
         maxAttendees: true,
-        imageUrl: true,
+        coverImageUrl: true,
+        hashtags: true,
         createdAt: true,
         creator: { select: { id: true, name: true } },
       },
     });
 
-    return NextResponse.json({ event }, { status: 201 });
+    return NextResponse.json(
+      {
+        event: {
+          ...event,
+          location: event.address,
+          date: event.startDate,
+          imageUrl: event.coverImageUrl,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error('POST /api/events error:', error);
     return NextResponse.json({ error: 'Failed to create event' }, { status: 500 });

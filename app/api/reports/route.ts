@@ -11,17 +11,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { targetId, targetType, reason, description, severity } = body;
 
-    if (!targetId || !targetType || !reason) {
-      return NextResponse.json({ error: 'targetId, targetType, and reason are required' }, { status: 400 });
+    if (!targetId || !reason) {
+      return NextResponse.json({ error: 'targetId and reason are required' }, { status: 400 });
     }
 
     const report = await prisma.report.create({
       data: {
-        reporterId: authUser.userId,
-        targetId,
-        targetType: targetType.toUpperCase(),
+        reporterUserId: authUser.userId,
+        reportedUserId: targetId,
         reason,
-        description: description ?? null,
+        description: description ?? 'No additional details provided',
         severity: severity ?? 'medium',
       },
     });

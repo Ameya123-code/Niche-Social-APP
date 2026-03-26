@@ -16,16 +16,26 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         id: true,
         title: true,
         description: true,
-        location: true,
-        date: true,
+        address: true,
+        city: true,
+        startDate: true,
+        endDate: true,
         category: true,
         maxAttendees: true,
-        imageUrl: true,
+        coverImageUrl: true,
+        hashtags: true,
+        discountPercent: true,
+        isPersonal: true,
         createdAt: true,
-        creator: { select: { id: true, name: true, profileImageUrl: true } },
-        _count: { select: { attendees: true } },
-        eventRatings: {
-          select: { rating: true },
+        creator: { select: { id: true, name: true, age: true, profileImageUrl: true } },
+        _count: { select: { attendees: true, ratings: true } },
+        ratings: {
+          select: {
+            rating: true,
+            review: true,
+            userId: true,
+            user: { select: { name: true } },
+          },
         },
       },
     });
@@ -33,11 +43,23 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
 
     // Calculate average rating
-    const avgRating = event.eventRatings.length > 0
-      ? event.eventRatings.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / event.eventRatings.length
+    const avgRating = event.ratings.length > 0
+      ? event.ratings.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / event.ratings.length
       : null;
 
-    return NextResponse.json({ event: { ...event, avgRating } }, { status: 200 });
+    return NextResponse.json(
+      {
+        event: {
+          ...event,
+          // Backward-compatible aliases
+          location: event.address,
+          date: event.startDate,
+          imageUrl: event.coverImageUrl,
+          avgRating,
+        },
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('GET /api/events/[id] error:', error);
     return NextResponse.json({ error: 'Failed to fetch event' }, { status: 500 });

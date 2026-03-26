@@ -16,8 +16,8 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await prisma.organizerRating.upsert({
-      where: { organizerId_raterId: { organizerId, raterId: authUser.userId } },
-      create: { organizerId, raterId: authUser.userId, rating: Number(rating), review: review ?? null },
+      where: { organizerId_userId: { organizerId, userId: authUser.userId } },
+      create: { organizerId, userId: authUser.userId, rating: Number(rating), review: review ?? null },
       update: { rating: Number(rating), review: review ?? null },
     });
 

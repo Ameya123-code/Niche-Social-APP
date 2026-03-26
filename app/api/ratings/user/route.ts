@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
-    const { ratedUserId, rating, context } = body;
+    const { ratedUserId, rating, behavior } = body;
 
     if (!ratedUserId || !rating || rating < 1 || rating > 5) {
       return NextResponse.json({ error: 'ratedUserId and rating (1-5) are required' }, { status: 400 });
@@ -20,9 +20,17 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await prisma.userBehaviorRating.upsert({
-      where: { ratedUserId_raterId: { ratedUserId, raterId: authUser.userId } },
-      create: { ratedUserId, raterId: authUser.userId, rating: Number(rating), context: context ?? null },
-      update: { rating: Number(rating), context: context ?? null },
+      where: { ratedUserId_raterUserId: { ratedUserId, raterUserId: authUser.userId } },
+      create: {
+        ratedUserId,
+        raterUserId: authUser.userId,
+        rating: Number(rating),
+        behavior: behavior ?? 'General',
+      },
+      update: {
+        rating: Number(rating),
+        behavior: behavior ?? 'General',
+      },
     });
 
     // Auto-flag logic: if avg behavior rating drops below 2.0, flag for review
@@ -35,10 +43,10 @@ export async function POST(request: NextRequest) {
     if (avg < 2.0 && allRatings.length >= 3) {
       await prisma.report.create({
         data: {
-          reporterId: authUser.userId,
-          targetId: ratedUserId,
-          targetType: 'USER',
+          reporterUserId: authUser.userId,
+          reportedUserId: ratedUserId,
           reason: 'AUTO_FLAG: Low behavior rating',
+          description: 'Automatically flagged due to low average behavior rating.',
           severity: 'medium',
         },
       });

@@ -41,25 +41,43 @@ export async function GET(request: NextRequest) {
             { title: { contains: query } },
             { description: { contains: query } },
             { category: { contains: query } },
+            { address: { contains: query } },
+            { city: { contains: query } },
           ],
         },
         take: 20,
-        orderBy: { date: 'asc' },
+        orderBy: { startDate: 'asc' },
         select: {
           id: true,
           title: true,
           description: true,
-          location: true,
-          date: true,
+          address: true,
+          city: true,
+          startDate: true,
+          endDate: true,
           category: true,
-          imageUrl: true,
+          coverImageUrl: true,
+          hashtags: true,
           creator: { select: { id: true, name: true } },
           _count: { select: { attendees: true } },
         },
       }),
     ]);
 
-    return NextResponse.json({ hashtag: query, opinions, events }, { status: 200 });
+    return NextResponse.json(
+      {
+        hashtag: query,
+        opinions,
+        events: events.map((event) => ({
+          ...event,
+          // Backward-compatible aliases
+          location: event.address,
+          date: event.startDate,
+          imageUrl: event.coverImageUrl,
+        })),
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('Search error:', error);
     return NextResponse.json({ error: 'Search failed' }, { status: 500 });
