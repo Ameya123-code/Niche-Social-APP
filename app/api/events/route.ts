@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       {
-        events: events.map((event) => ({
+        events: events.map((event: (typeof events)[number]) => ({
           ...event,
           // Backward-compatible aliases for older client code
           location: event.address,

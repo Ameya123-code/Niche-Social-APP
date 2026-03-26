@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       {
         hashtag: query,
         opinions,
-        events: events.map((event) => ({
+        events: events.map((event: (typeof events)[number]) => ({
           ...event,
           // Backward-compatible aliases
           location: event.address,
