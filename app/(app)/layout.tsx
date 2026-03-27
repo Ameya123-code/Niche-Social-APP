@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Heart, Map, Search, User } from 'lucide-react';
+import ThemeToggle from '@/app/components/ThemeToggle';
 
 const NAV = [
   { href: '/cards', icon: Heart, label: 'Discover' },
@@ -73,8 +74,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-black">
       <div className="max-w-6xl mx-auto relative min-h-screen flex flex-col px-4 sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-40 py-4 backdrop-blur bg-white/70 dark:bg-black/40 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex items-center justify-between">
+            <p className="text-lg font-semibold text-black dark:text-white">Niche</p>
+            <ThemeToggle />
+          </div>
+        </header>
         <main className="flex-1 pb-20 overflow-y-auto">{children}</main>
         <BottomNav />
       </div>

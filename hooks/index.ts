@@ -35,7 +35,7 @@ export const useAuth = () => {
       console.error('Login failed:', error);
     } finally {
       setLoading(false);
-    }
+    }  
   };
 
   const logout = () => {
