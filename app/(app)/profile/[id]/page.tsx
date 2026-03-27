@@ -62,7 +62,7 @@ export default function UserProfilePage() {
   if (!profile) return <div className="flex flex-col items-center justify-center h-screen gap-4"><p className="text-gray-500">User not found</p><Link href="/cards" className="text-red-500">← Back</Link></div>;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black pb-10">
+    <div className="w-full h-full bg-white dark:bg-black pb-10">
       {/* Header */}
       <div className="relative h-48 bg-gradient-to-br from-red-100 to-pink-200 dark:from-gray-800 dark:to-gray-700">
         <Link href="/cards" className="absolute top-12 left-4 w-10 h-10 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center">
@@ -77,13 +77,13 @@ export default function UserProfilePage() {
         </div>
       </div>
 
-      <div className="px-5 pt-16 pb-5 text-center">
+      <div className="px-5 sm:px-6 lg:px-8 pt-16 pb-5 text-center">
         <h1 className="text-2xl font-bold text-black dark:text-white">{profile.name}, {profile.age}</h1>
         <p className="text-sm text-gray-500 mt-1">{(profile.opinions ?? []).length} opinions shared</p>
       </div>
 
       {/* Opinions */}
-      <div className="px-5 space-y-3 mb-6">
+      <div className="px-5 sm:px-6 lg:px-8 space-y-3 mb-6">
         <h2 className="font-bold text-black dark:text-white">Opinions</h2>
         {(profile.opinions ?? []).length === 0 ? (
           <div className="text-center py-8 text-gray-400">
@@ -112,7 +112,7 @@ export default function UserProfilePage() {
       </div>
 
       {/* Rate Behavior */}
-      <div className="px-5 mb-5">
+      <div className="px-5 sm:px-6 lg:px-8 mb-5">
         <h2 className="font-bold text-black dark:text-white mb-3">Rate Behavior</h2>
         {actionDone === 'rating' ? (
           <p className="text-center text-green-600 text-sm font-semibold py-2">✓ Rating submitted</p>

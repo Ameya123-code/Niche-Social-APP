@@ -20,25 +20,159 @@ import { useUIStore, type EditorTab } from '@/store/ui';
 import { Avatar } from './Avatar';
 import { Banner } from './Banner';
 import { DecorationLayer } from './DecorationLayer';
-import { ProfileCard } from './ProfileCard';
+import ProfileCard from '@/components/ReactBitsProfileCard';
 import { DECORATION_FRAMES } from './Avatar';
 import { BADGE_PRESETS } from './DecorationLayer';
 
 // ─── Card Design constants (mirror from cards page) ─────────────────────────
 
 const CARD_THEMES = [
-  { id: 'rose',     name: 'Rose Pulse',    shell: 'from-rose-500/90 via-pink-500/85 to-fuchsia-600/90' },
-  { id: 'midnight', name: 'Midnight Glass', shell: 'from-slate-900 via-indigo-900 to-violet-900' },
-  { id: 'sunset',   name: 'Sunset Pop',    shell: 'from-orange-500 via-rose-500 to-pink-600' },
+  { id: 'rose',         name: 'Rose Pulse',      shell: 'from-rose-500/90 via-pink-500/85 to-fuchsia-600/90', gradient: 'linear-gradient(135deg,#f43f5e,#ec4899,#a21caf)' },
+  { id: 'midnight',     name: 'Midnight Glass',  shell: 'from-slate-900 via-indigo-900 to-violet-900', gradient: 'linear-gradient(135deg,#0f172a,#312e81,#4c1d95)' },
+  { id: 'sunset',       name: 'Sunset Pop',      shell: 'from-orange-500 via-rose-500 to-pink-600', gradient: 'linear-gradient(135deg,#f97316,#f43f5e,#ec4899)' },
+  { id: 'ocean',        name: 'Ocean Wave',      shell: 'from-sky-700 via-cyan-500 to-teal-700', gradient: 'linear-gradient(135deg,#0369a1,#06b6d4,#0f766e)' },
+  { id: 'forest',       name: 'Forest Night',    shell: 'from-emerald-900 via-green-700 to-lime-700', gradient: 'linear-gradient(135deg,#065f46,#166534,#65a30d)' },
+  { id: 'violet',       name: 'Violet Storm',    shell: 'from-violet-700 via-purple-600 to-indigo-700', gradient: 'linear-gradient(135deg,#6d28d9,#9333ea,#4338ca)' },
+  { id: 'aurora',       name: 'Aurora Flow',     shell: 'from-cyan-400 via-emerald-400 to-violet-400', gradient: 'linear-gradient(135deg,#22d3ee,#34d399,#a78bfa)' },
+  { id: 'ember',        name: 'Ember Flame',     shell: 'from-amber-700 via-red-600 to-orange-800', gradient: 'linear-gradient(135deg,#b45309,#dc2626,#9a3412)' },
+  { id: 'mono-noir',    name: 'Mono Noir',       shell: 'from-zinc-900 via-neutral-800 to-black', gradient: 'linear-gradient(135deg,#111827,#262626,#09090b)' },
+  { id: 'cotton-candy', name: 'Cotton Candy',    shell: 'from-pink-400 via-indigo-400 to-cyan-400', gradient: 'linear-gradient(135deg,#f472b6,#818cf8,#22d3ee)' },
 ];
 const BORDER_STYLES = ['glass', 'neon', 'minimal'] as const;
 const FONT_STYLES   = ['modern', 'mono', 'playful'] as const;
-const STICKER_PACKS: Record<string, string[]> = {
-  vibes:  ['✨', '💫', '🔥', '💎'],
-  chill:  ['☕', '🌙', '🎧', '🫶'],
-  social: ['💬', '🤝', '🎉', '😎'],
-  nerd:   ['🧠', '📚', '💻', '🎮'],
+
+type InterestOption = {
+  id: string;
+  label: string;
+  emoji: string;
 };
+
+const INTEREST_SECTIONS: Array<{
+  id: string;
+  label: string;
+  options: InterestOption[];
+}> = [
+  {
+    id: 'identity',
+    label: 'Identity',
+    options: [
+      { id: 'gym-lifestyle', label: 'Gym Lifestyle', emoji: '🏋️' },
+      { id: 'runner', label: 'Runner', emoji: '🏃' },
+      { id: 'yogi', label: 'Yogi', emoji: '🧘' },
+      { id: 'entrepreneur', label: 'Entrepreneur', emoji: '🚀' },
+      { id: 'builder', label: 'Builder', emoji: '🛠️' },
+      { id: 'creative-artist', label: 'Creative Artist', emoji: '🎨' },
+      { id: 'writer', label: 'Writer', emoji: '✍️' },
+      { id: 'filmmaker', label: 'Filmmaker', emoji: '🎬' },
+      { id: 'tech-nerd', label: 'Tech Nerd', emoji: '🤓' },
+      { id: 'developer', label: 'Developer', emoji: '💻' },
+      { id: 'student', label: 'Student', emoji: '🎓' },
+      { id: 'corporate-professional', label: 'Corporate Professional', emoji: '💼' },
+      { id: 'freelancer', label: 'Freelancer', emoji: '🧑‍💻' },
+    ],
+  },
+  {
+    id: 'activities',
+    label: 'Activities',
+    options: [
+      { id: 'football', label: 'Football', emoji: '⚽' },
+      { id: 'cricket', label: 'Cricket', emoji: '🏏' },
+      { id: 'badminton', label: 'Badminton', emoji: '🏸' },
+      { id: 'basketball', label: 'Basketball', emoji: '🏀' },
+      { id: 'tennis', label: 'Tennis', emoji: '🎾' },
+      { id: 'gym', label: 'Gym', emoji: '🏋️' },
+      { id: 'fitness-training', label: 'Fitness Training', emoji: '💪' },
+      { id: 'traveling', label: 'Traveling', emoji: '✈️' },
+      { id: 'cooking', label: 'Cooking', emoji: '🍳' },
+      { id: 'food-exploration', label: 'Food Exploration', emoji: '🍜' },
+      { id: 'photography', label: 'Photography', emoji: '📸' },
+      { id: 'dancing', label: 'Dancing', emoji: '🕺' },
+      { id: 'music-jamming', label: 'Music Jamming', emoji: '🎵' },
+    ],
+  },
+  {
+    id: 'games',
+    label: 'Games',
+    options: [
+      { id: 'valorant', label: 'Valorant', emoji: '🎯' },
+      { id: 'pubg-bgmi', label: 'PUBG / BGMI', emoji: '🔫' },
+      { id: 'cod-warzone', label: 'COD / Warzone', emoji: '🪖' },
+      { id: 'fortnite', label: 'Fortnite', emoji: '🏝️' },
+      { id: 'apex-legends', label: 'Apex Legends', emoji: '⚡' },
+      { id: 'cs2', label: 'CS2', emoji: '💣' },
+      { id: 'league-of-legends', label: 'League of Legends', emoji: '🛡️' },
+      { id: 'dota-2', label: 'Dota 2', emoji: '🧙' },
+      { id: 'gta-v', label: 'GTA V', emoji: '🚗' },
+      { id: 'minecraft', label: 'Minecraft', emoji: '🧱' },
+      { id: 'fifa-ea-fc', label: 'FIFA / EA FC', emoji: '🏆' },
+      { id: 'genshin-impact', label: 'Genshin Impact', emoji: '🌌' },
+    ],
+  },
+  {
+    id: 'opinions',
+    label: 'Opinions',
+    options: [
+      { id: 'current-events', label: 'Current Events', emoji: '📰' },
+      { id: 'tech-trends', label: 'Tech Trends', emoji: '📈' },
+      { id: 'movies-pop-culture', label: 'Movies & Pop Culture', emoji: '🍿' },
+      { id: 'debates', label: 'Debates', emoji: '🗣️' },
+      { id: 'ai-replace-jobs', label: 'AI will replace jobs', emoji: '🤖' },
+      { id: 'remote-vs-office', label: 'Remote work vs office', emoji: '🏢' },
+      { id: 'hot-takes', label: 'Hot Takes', emoji: '🔥' },
+      { id: 'unpopular-opinions', label: 'Unpopular Opinions', emoji: '💭' },
+      { id: 'deep-conversations', label: 'Deep Conversations', emoji: '🧠' },
+    ],
+  },
+  {
+    id: 'taste',
+    label: 'Taste',
+    options: [
+      { id: 'pop-music', label: 'Pop Music', emoji: '🎤' },
+      { id: 'hip-hop', label: 'Hip-Hop', emoji: '🎧' },
+      { id: 'indie-music', label: 'Indie Music', emoji: '🎸' },
+      { id: 'edm', label: 'EDM', emoji: '🎛️' },
+      { id: 'favorite-artists', label: 'Favorite Artists', emoji: '⭐' },
+      { id: 'movies', label: 'Movies', emoji: '🎬' },
+      { id: 'series', label: 'Series', emoji: '📺' },
+      { id: 'anime', label: 'Anime', emoji: '🌸' },
+      { id: 'podcasts', label: 'Podcasts', emoji: '🎙️' },
+      { id: 'youtube-niches', label: 'YouTube Niches', emoji: '▶️' },
+      { id: 'coffee-culture', label: 'Coffee Culture', emoji: '☕' },
+      { id: 'street-food', label: 'Street Food', emoji: '🌮' },
+      { id: 'fine-dining', label: 'Fine Dining', emoji: '🍽️' },
+    ],
+  },
+  {
+    id: 'lifestyle',
+    label: 'Lifestyle',
+    options: [
+      { id: 'introvert', label: 'Introvert', emoji: '📚' },
+      { id: 'extrovert', label: 'Extrovert', emoji: '🎉' },
+      { id: 'ambivert', label: 'Ambivert', emoji: '⚖️' },
+      { id: 'night-owl', label: 'Night Owl', emoji: '🌙' },
+      { id: 'early-riser', label: 'Early Riser', emoji: '🌅' },
+      { id: 'party-person', label: 'Party Person', emoji: '🥳' },
+      { id: 'chill-vibes', label: 'Chill Vibes', emoji: '🛋️' },
+      { id: 'luxury-travel', label: 'Luxury Travel', emoji: '🧳' },
+      { id: 'backpacking', label: 'Backpacking', emoji: '🎒' },
+      { id: 'small-groups', label: 'Small Groups', emoji: '👥' },
+      { id: 'large-groups', label: 'Large Groups', emoji: '👨‍👩‍👧‍👦' },
+    ],
+  },
+  {
+    id: 'local',
+    label: 'Local',
+    options: [
+      { id: 'football-buddies', label: 'Looking for football buddies', emoji: '📍' },
+      { id: 'badminton-buddies', label: 'Looking for badminton buddies', emoji: '📍' },
+      { id: 'cafe-hopping-weekend', label: 'Open to café hopping this weekend', emoji: '☕' },
+      { id: 'live-music-events', label: 'Open to live music events', emoji: '🎶' },
+      { id: 'attending-local-events', label: 'Attending local events', emoji: '🎟️' },
+      { id: 'weekend-city-explorer', label: 'Weekend city explorer', emoji: '🗺️' },
+      { id: 'coworking-buddy', label: 'Nearby co-working buddy', emoji: '💼' },
+    ],
+  },
+];
 
 // ─── Debounce hook ───────────────────────────────────────────────────────────
 
@@ -55,7 +189,7 @@ function useDebounce<T>(value: T, ms: number): T {
 
 const TABS: Array<{ id: EditorTab; label: string; Icon: React.ElementType }> = [
   { id: 'avatar',      label: 'Avatar',      Icon: User },
-  { id: 'banner',      label: 'Banner',      Icon: ImageIcon },
+  { id: 'banner',      label: 'Background',      Icon: ImageIcon },
   { id: 'theme',       label: 'Theme',       Icon: Palette },
   { id: 'bio',         label: 'Bio',         Icon: FileText },
   { id: 'decorations', label: 'Decorations', Icon: Sparkles },
@@ -144,10 +278,43 @@ function AvatarPanel({ token }: { token: string }) {
 }
 
 function BannerPanel({ token }: { token: string }) {
-  const global = useProfileStore((s) => s.global);
-  const updateGlobal = useProfileStore((s) => s.updateGlobal);
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [bgMode, setBgMode] = useState<'theme' | 'gif' | 'image'>('theme');
+  const [backgroundUrl, setBackgroundUrl] = useState('');
+
+  useEffect(() => {
+    if (!token) return;
+    fetch('/api/users/me/card-design', {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        const cd = d?.cardDesign;
+        if (!cd) return;
+        if (cd.backgroundMode === 'gif' || cd.backgroundMode === 'theme' || cd.backgroundMode === 'image') setBgMode(cd.backgroundMode);
+        if (typeof cd.gifUrl === 'string') setBackgroundUrl(cd.gifUrl);
+      })
+      .catch(() => {});
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    const t = setTimeout(async () => {
+      try {
+        await fetch('/api/users/me/card-design', {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ backgroundMode: bgMode, gifUrl: backgroundUrl }),
+        });
+        window.dispatchEvent(new Event('card-design-updated'));
+      } catch {
+        // ignore
+      }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [token, bgMode, backgroundUrl]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -164,7 +331,8 @@ function BannerPanel({ token }: { token: string }) {
       if (res.ok) {
         const d = await res.json() as { url: string };
         const isGif = file.type === 'image/gif';
-        updateGlobal({ banner: d.url, bannerType: isGif ? 'gif' : 'static' });
+        setBackgroundUrl(d.url);
+        setBgMode(isGif ? 'gif' : 'image');
       }
     } finally {
       setUploading(false);
@@ -174,23 +342,23 @@ function BannerPanel({ token }: { token: string }) {
   return (
     <div className="space-y-4">
       <div>
-        <span className={labelCls}>Banner Type</span>
+        <span className={labelCls}>Background Type</span>
         <div className="grid grid-cols-3 gap-2">
-          {(['gradient', 'static', 'gif'] as const).map((t) => (
+          {(['theme', 'image', 'gif'] as const).map((t) => (
             <button
               key={t}
-              onClick={() => updateGlobal({ bannerType: t })}
-              className={`py-2 rounded-xl border text-xs capitalize transition ${global.bannerType === t ? activeBtn : inactiveBtn}`}
+              onClick={() => setBgMode(t)}
+              className={`py-2 rounded-xl border text-xs capitalize transition ${bgMode === t ? activeBtn : inactiveBtn}`}
             >
-              {t === 'gradient' ? 'Gradient' : t === 'gif' ? 'Animated GIF' : 'Image'}
+              {t === 'theme' ? 'Gradient' : t === 'gif' ? 'Animated GIF' : 'Image'}
             </button>
           ))}
         </div>
       </div>
 
-      {global.bannerType !== 'gradient' && (
+      {bgMode !== 'theme' && (
         <div>
-          <span className={labelCls}>Banner Image / GIF</span>
+          <span className={labelCls}>Background Image / GIF</span>
           <div className="space-y-2">
             <button
               onClick={() => fileRef.current?.click()}
@@ -198,11 +366,11 @@ function BannerPanel({ token }: { token: string }) {
               className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 text-xs w-full hover:border-[var(--primary)] transition"
             >
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              {uploading ? 'Uploading…' : 'Upload banner'}
+              {uploading ? 'Uploading…' : 'Upload background'}
             </button>
             <input
-              value={global.banner}
-              onChange={(e) => updateGlobal({ banner: e.target.value })}
+              value={backgroundUrl}
+              onChange={(e) => setBackgroundUrl(e.target.value)}
               placeholder="Or paste image / GIF URL"
               className={inputCls}
             />
@@ -323,6 +491,7 @@ function BioPanel() {
 function DecorationsPanel() {
   const global = useProfileStore((s) => s.global);
   const updateGlobal = useProfileStore((s) => s.updateGlobal);
+  const animatedFrames = new Set(['rainbow-spin', 'aurora', 'pulse-neon', 'cyber']);
 
   const toggleDecoration = (id: string) => {
     // Avatar frame should be single-select (badges are managed separately).
@@ -341,8 +510,8 @@ function DecorationsPanel() {
   return (
     <div className="space-y-5">
       <div>
-        <span className={labelCls}>Avatar Frame</span>
-        <div className="grid grid-cols-3 gap-2">
+        <span className={labelCls}>Avatar Frame (including animated)</span>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {DECORATION_FRAMES.map((frame) => {
             const active = global.decorations.includes(frame.id);
             return (
@@ -351,7 +520,14 @@ function DecorationsPanel() {
                 onClick={() => toggleDecoration(frame.id)}
                 className={`flex items-center justify-between px-3 py-2 rounded-xl border text-xs transition ${active ? activeBtn : inactiveBtn}`}
               >
-                {frame.label}
+                <span className="inline-flex items-center gap-1.5">
+                  {frame.label}
+                  {animatedFrames.has(frame.id) && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-400/25">
+                      Animated
+                    </span>
+                  )}
+                </span>
                 {active && <Check className="w-3.5 h-3.5" />}
               </button>
             );
@@ -385,12 +561,14 @@ function CardStylePanel() {
   const [themeId, setThemeId] = useState('rose');
   const [border, setBorder] = useState<typeof BORDER_STYLES[number]>('glass');
   const [font, setFont] = useState<typeof FONT_STYLES[number]>('modern');
-  const [bgMode, setBgMode] = useState<'theme' | 'gif'>('theme');
-  const [gifUrl, setGifUrl] = useState('');
-  const [myStickers, setMyStickers] = useState<string[]>([]);
-  const [stickerInput, setStickerInput] = useState('');
+  const [myInterests, setMyInterests] = useState<string[]>([]);
+  const [activeInterestSection, setActiveInterestSection] = useState<string>(INTEREST_SECTIONS[0]?.id ?? 'identity');
+  const [interestInput, setInterestInput] = useState('');
+  const [interestNotice, setInterestNotice] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [autoSaveReady, setAutoSaveReady] = useState(false);
+  const MAX_INTERESTS = 30;
 
   // Load existing card design
   useEffect(() => {
@@ -404,14 +582,13 @@ function CardStylePanel() {
         if (CARD_THEMES.some((t) => t.id === cd.themeId)) setThemeId(cd.themeId);
         if (BORDER_STYLES.includes(cd.borderStyle)) setBorder(cd.borderStyle);
         if (FONT_STYLES.includes(cd.fontStyle)) setFont(cd.fontStyle);
-        if (cd.backgroundMode) setBgMode(cd.backgroundMode);
-        if (typeof cd.gifUrl === 'string') setGifUrl(cd.gifUrl);
-        if (Array.isArray(cd.stickers)) setMyStickers(cd.stickers.slice(0, 10));
+        if (Array.isArray(cd.stickers)) setMyInterests(cd.stickers.slice(0, MAX_INTERESTS));
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => {})
+      .finally(() => setAutoSaveReady(true));
+  }, [MAX_INTERESTS]);
 
-  const saveCardDesign = async () => {
+  const saveCardDesign = async (silent = false) => {
     const token = localStorage.getItem('auth_token');
     if (!token) return;
     setSaving(true);
@@ -419,27 +596,73 @@ function CardStylePanel() {
       const res = await fetch('/api/users/me/card-design', {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isCustomized: true, themeId, stickers: myStickers, borderStyle: border, fontStyle: font, backgroundMode: bgMode, gifUrl }),
+        body: JSON.stringify({ isCustomized: true, themeId, stickers: myInterests, borderStyle: border, fontStyle: font }),
       });
       if (!res.ok) throw new Error('Failed to save card style');
       window.dispatchEvent(new Event('card-design-updated'));
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      if (!silent) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
     } finally {
       setSaving(false);
     }
   };
 
+  useEffect(() => {
+    if (!autoSaveReady) return;
+    const t = setTimeout(() => {
+      saveCardDesign(true).catch(() => {});
+    }, 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [themeId, border, font, myInterests, autoSaveReady]);
+
+  const activeSection = INTEREST_SECTIONS.find((section) => section.id === activeInterestSection) ?? INTEREST_SECTIONS[0];
+  const interestEmojiMap = INTEREST_SECTIONS
+    .flatMap((section) => section.options)
+    .reduce<Record<string, string>>((acc, option) => {
+      acc[option.label] = option.emoji;
+      return acc;
+    }, {});
+
+  const addInterest = (raw: string) => {
+    const value = raw.trim();
+    if (!value) return;
+    const has = myInterests.some((i) => i.toLowerCase() === value.toLowerCase());
+    if (has) {
+      setInterestNotice('Already selected');
+      return;
+    }
+    if (myInterests.length >= MAX_INTERESTS) {
+      setInterestNotice(`Maximum ${MAX_INTERESTS} interests reached`);
+      return;
+    }
+    setInterestNotice('');
+    setMyInterests((prev) => [...prev, value]);
+  };
+
+  const toggleInterest = (value: string) => {
+    const exists = myInterests.includes(value);
+    if (exists) {
+      setMyInterests((prev) => prev.filter((i) => i !== value));
+      setInterestNotice('');
+      return;
+    }
+    addInterest(value);
+  };
+
   return (
     <div className="space-y-4">
-      <p className="text-xs text-gray-500">Controls the appearance of your card in the Discover feed.</p>
+      <p className="text-xs text-gray-500">Controls the appearance of your profile card.</p>
 
       <div>
         <span className={labelCls}>Card Theme</span>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           {CARD_THEMES.map((t) => (
             <button key={t.id} onClick={() => setThemeId(t.id)}
-              className={`py-2 px-3 rounded-xl border text-xs transition ${themeId === t.id ? activeBtn : inactiveBtn}`}>
+              className={`py-2 px-3 rounded-xl border text-xs transition text-left ${themeId === t.id ? activeBtn : inactiveBtn}`}>
+              <span className="block w-full h-1.5 rounded-full mb-1.5" style={{ background: t.gradient }} />
               {t.name}
             </button>
           ))}
@@ -472,53 +695,94 @@ function CardStylePanel() {
       </div>
 
       <div>
-        <span className={labelCls}>Background</span>
-        <div className="flex gap-2 mb-2">
-          {(['theme', 'gif'] as const).map((m) => (
-            <button key={m} onClick={() => setBgMode(m)}
-              className={`px-3 py-2 rounded-xl border text-xs transition ${bgMode === m ? activeBtn : inactiveBtn}`}>
-              {m === 'gif' ? 'GIF URL' : 'Gradient'}
-            </button>
-          ))}
-        </div>
-        {bgMode === 'gif' && (
-          <input value={gifUrl} onChange={(e) => setGifUrl(e.target.value)}
-            placeholder="Paste GIF URL" className={inputCls} />
-        )}
-      </div>
+        <span className={labelCls}>Interests</span>
+        <p className="text-[11px] text-gray-500 mb-2">
+          Pick interests dating-app style. Selected: <span className="font-semibold">{myInterests.length}/{MAX_INTERESTS}</span>
+        </p>
 
-      <div>
-        <span className={labelCls}>Stickers</span>
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {Object.entries(STICKER_PACKS).map(([name, pack]) => (
-            <button key={name} onClick={() => setMyStickers((p) => [...new Set([...p, ...pack])].slice(0, 10))}
-              className={`px-3 py-1.5 rounded-full border text-xs ${inactiveBtn}`}>
-              + {name}
-            </button>
-          ))}
+        <div className="mb-2 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-1.5 w-max pr-1">
+            {INTEREST_SECTIONS.map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => setActiveInterestSection(section.id)}
+                className={`px-2.5 py-1.5 rounded-full border text-xs whitespace-nowrap ${activeInterestSection === section.id ? activeBtn : inactiveBtn}`}
+              >
+                {section.label}
+              </button>
+            ))}
+          </div>
         </div>
+
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-2">{activeSection?.label}</p>
+          <div className="flex flex-wrap gap-2">
+            {activeSection?.options.map((option) => {
+              const active = myInterests.includes(option.label);
+              return (
+                <button
+                  key={`${activeSection.id}-${option.id}`}
+                  type="button"
+                  onClick={() => toggleInterest(option.label)}
+                  className={`px-3 py-2 rounded-2xl border text-xs transition inline-flex items-center gap-1.5 ${active ? activeBtn : inactiveBtn}`}
+                >
+                  <span>{option.emoji}</span>
+                  <span>{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="flex gap-2">
-          <input value={stickerInput} onChange={(e) => setStickerInput(e.target.value)}
-            placeholder="Custom emoji" className={`${inputCls} flex-1`} />
-          <button onClick={() => { if (stickerInput.trim()) { setMyStickers((p) => [...new Set([...p, stickerInput.trim()])].slice(0, 10)); setStickerInput(''); } }}
+          <input value={interestInput} onChange={(e) => setInterestInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return;
+              e.preventDefault();
+              addInterest(interestInput);
+              if (interestInput.trim()) setInterestInput('');
+            }}
+            placeholder="Add custom interest" className={`${inputCls} flex-1`} />
+          <button onClick={() => {
+            addInterest(interestInput);
+            if (interestInput.trim()) setInterestInput('');
+          }}
             className="px-3 py-2 rounded-xl text-xs font-semibold text-white"
             style={{ background: 'var(--primary)' }}>
             Add
           </button>
         </div>
-        {myStickers.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {myStickers.map((s, i) => (
-              <button key={i} onClick={() => setMyStickers((p) => p.filter((_, j) => j !== i))}
-                className="px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-xs flex items-center gap-1">
-                {s} <X className="w-3 h-3 text-gray-400" />
+
+        {myInterests.length > 0 && (
+          <div className="mt-2 rounded-xl border border-gray-200 dark:border-gray-700 p-2">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[11px] font-semibold text-gray-500">Selected interests</p>
+              <button
+                type="button"
+                onClick={() => { setMyInterests([]); setInterestNotice(''); }}
+                className="text-[11px] text-red-500 hover:text-red-600"
+              >
+                Clear
               </button>
-            ))}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {myInterests.map((s, i) => (
+                <button key={`${s}-${i}`} onClick={() => setMyInterests((p) => p.filter((_, j) => j !== i))}
+                  className="px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 text-xs flex items-center gap-1">
+                  <span>{interestEmojiMap[s] ?? '✨'}</span>
+                  <span>{s}</span>
+                  <X className="w-3 h-3 text-gray-400" />
+                </button>
+              ))}
+            </div>
           </div>
         )}
+
+        {interestNotice && <p className="mt-1 text-[11px] text-amber-500">{interestNotice}</p>}
       </div>
 
-      <button onClick={saveCardDesign} disabled={saving}
+      <button onClick={() => saveCardDesign()} disabled={saving}
         className="w-full py-3 rounded-2xl text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
         style={{ background: `linear-gradient(135deg, var(--primary), var(--accent))` }}>
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : null}
@@ -532,11 +796,72 @@ function CardStylePanel() {
 
 function LivePreview({ name }: { name: string }) {
   const global = useProfileStore((s) => s.global);
+  const [cardDesign, setCardDesign] = useState<{
+    themeId?: string;
+    borderStyle?: 'glass' | 'neon' | 'minimal';
+    fontStyle?: 'modern' | 'mono' | 'playful';
+    backgroundMode?: 'theme' | 'gif' | 'image';
+    gifUrl?: string;
+    stickers?: string[];
+  } | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+      try {
+        const res = await fetch('/api/users/me/card-design', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        if (!res.ok) return;
+        const d = await res.json() as {
+          cardDesign?: {
+            themeId?: string;
+            borderStyle?: 'glass' | 'neon' | 'minimal';
+            fontStyle?: 'modern' | 'mono' | 'playful';
+            backgroundMode?: 'theme' | 'gif' | 'image';
+            gifUrl?: string;
+            stickers?: string[];
+          };
+        };
+        if (d?.cardDesign) setCardDesign(d.cardDesign);
+      } catch {
+        // ignore
+      }
+    };
+
+    load();
+    const onUpdated = () => { load(); };
+    window.addEventListener('card-design-updated', onUpdated);
+    return () => window.removeEventListener('card-design-updated', onUpdated);
+  }, []);
+
   const handle = name.toLowerCase().replace(/\s+/g, '') || 'you';
   const statusLabel =
     global.status === 'dnd' ? 'Do Not Disturb' :
     global.status === 'idle' ? 'Away' :
     global.status === 'offline' ? 'Offline' : 'Online';
+  const selectedAvatarFrame = [...(global.decorations ?? [])]
+    .reverse()
+    .find((d) => [
+      'none',
+      'neon-pink',
+      'gold',
+      'ice',
+      'emerald',
+      'fire',
+      'rainbow',
+      'sapphire',
+      'amethyst',
+      'ruby',
+      'obsidian',
+      'pearl',
+      'rainbow-spin',
+      'aurora',
+      'pulse-neon',
+      'cyber',
+    ].includes(d)) ?? 'none';
 
   return (
     <div style={{ width: '100%' }}>
@@ -563,11 +888,35 @@ function LivePreview({ name }: { name: string }) {
             title={global.bio ? global.bio.slice(0, 40) : ''}
             status={statusLabel}
             avatarUrl={global.avatar}
+            avatarFrame={selectedAvatarFrame as
+              | 'none'
+              | 'neon-pink'
+              | 'gold'
+              | 'ice'
+              | 'emerald'
+              | 'fire'
+              | 'rainbow'
+              | 'sapphire'
+              | 'amethyst'
+              | 'ruby'
+              | 'obsidian'
+              | 'pearl'
+              | 'rainbow-spin'
+              | 'aurora'
+              | 'pulse-neon'
+              | 'cyber'}
+            themeId={cardDesign?.themeId ?? 'rose'}
+            borderStyle={cardDesign?.borderStyle ?? 'glass'}
+            fontStyle={cardDesign?.fontStyle ?? 'modern'}
+            backgroundMode={cardDesign?.backgroundMode === 'gif' || cardDesign?.backgroundMode === 'image' ? cardDesign.backgroundMode : 'theme'}
+            gifUrl={cardDesign?.gifUrl}
+            bannerUrl=""
+            interests={Array.isArray(cardDesign?.stickers) && cardDesign.stickers.length
+              ? cardDesign.stickers
+              : global.badges.slice(0, 10)}
             enableTilt={false}
             showUserInfo
             contactText="Message"
-            behindGlowEnabled={false}
-            innerGradient={`linear-gradient(145deg, ${global.theme.primary}55 0%, ${global.theme.accent}33 100%)`}
           />
         </div>
       </div>

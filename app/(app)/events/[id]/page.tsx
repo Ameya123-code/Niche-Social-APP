@@ -88,7 +88,7 @@ export default function EventDetailPage() {
   const end = new Date(event.endDate);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black pb-8">
+    <div className="w-full h-full bg-white dark:bg-black pb-8">
       {/* Cover + back */}
       <div className="relative">
         {event.coverImageUrl ? (
@@ -111,7 +111,7 @@ export default function EventDetailPage() {
         </div>
       </div>
 
-      <div className="px-5 py-5 space-y-5">
+      <div className="px-5 sm:px-6 lg:px-8 py-5 space-y-5">
         {/* Meta grid */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-gray-50 dark:bg-gray-950 border border-gray-100 dark:border-gray-800 rounded-2xl p-3">

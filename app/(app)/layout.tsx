@@ -74,15 +74,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-black">
-      <div className="max-w-6xl mx-auto relative min-h-screen flex flex-col px-4 sm:px-6 lg:px-8">
-        <header className="sticky top-0 z-40 py-4 backdrop-blur bg-white/70 dark:bg-black/40 border-b border-gray-100 dark:border-gray-800">
+    <div className="h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-black overflow-hidden">
+      <div className="w-full relative h-full flex flex-col">
+        <header className="sticky top-0 z-40 py-4 backdrop-blur bg-white/70 dark:bg-black/40 border-b border-gray-100 dark:border-gray-800 px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <p className="text-lg font-semibold text-black dark:text-white">Niche</p>
             <ThemeToggle />
           </div>
         </header>
-        <main className="flex-1 pb-20 overflow-y-auto">{children}</main>
+        <main className="flex-1 pb-20 overflow-y-auto w-full">{children}</main>
         <BottomNav />
       </div>
     </div>
@@ -92,7 +92,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 function BottomNav() {
   const pathname = usePathname();
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-6xl bg-white dark:bg-black border-t border-gray-100 dark:border-gray-900 z-50 px-4 sm:px-6 lg:px-8">
+    <nav className="fixed bottom-0 left-0 w-full bg-white dark:bg-black border-t border-gray-100 dark:border-gray-900 z-50">
       <div className="flex">
         {NAV.map(({ href, icon: Icon, label }) => {
           const active = pathname === href || pathname.startsWith(href + '/');

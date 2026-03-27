@@ -78,9 +78,9 @@ export default function SearchPage() {
   const parseHashtags = (s: string) => { try { return JSON.parse(s) as string[]; } catch { return []; } };
 
   return (
-    <div className="flex flex-col h-screen bg-white dark:bg-black">
+    <div className="flex flex-col w-full h-full bg-white dark:bg-black">
       {/* Header */}
-      <div className="px-5 pt-12 pb-4 flex-shrink-0">
+      <div className="px-5 sm:px-6 lg:px-8 pt-4 pb-4 flex-shrink-0">
         <h1 className="text-2xl font-bold text-black dark:text-white mb-4">Search</h1>
         <div className="relative">
           <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -106,7 +106,7 @@ export default function SearchPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4">
+      <div className="flex-1 overflow-y-auto px-5 sm:px-6 lg:px-8">
         {!query ? (
           /* Trending */
           <div>

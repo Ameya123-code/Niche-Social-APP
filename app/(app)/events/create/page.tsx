@@ -50,9 +50,9 @@ export default function CreateEventPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="w-full h-full bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-4 py-4 flex items-center gap-3">
+      <div className="bg-white border-b border-gray-100 px-5 sm:px-6 lg:px-8 py-4 flex items-center gap-3">
         <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-gray-100 transition-colors">
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>

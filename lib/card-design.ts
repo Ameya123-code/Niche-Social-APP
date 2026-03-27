@@ -6,7 +6,7 @@ export type UserCardDesign = {
   stickers: string[];
   borderStyle: 'glass' | 'neon' | 'minimal';
   fontStyle: 'modern' | 'mono' | 'playful';
-  backgroundMode: 'theme' | 'gif';
+  backgroundMode: 'theme' | 'gif' | 'image';
   gifUrl?: string;
   updatedAt: string;
 };
@@ -31,7 +31,18 @@ const normalizeStickers = (stickers: unknown): string[] => {
 };
 
 export const normalizeThemeId = (themeId?: string) => {
-  const allowed = new Set(['rose', 'midnight', 'sunset']);
+  const allowed = new Set([
+    'rose',
+    'midnight',
+    'sunset',
+    'ocean',
+    'forest',
+    'violet',
+    'aurora',
+    'ember',
+    'mono-noir',
+    'cotton-candy',
+  ]);
   return allowed.has(themeId ?? '') ? (themeId as string) : 'rose';
 };
 
@@ -44,7 +55,7 @@ const normalizeFontStyle = (style?: string): UserCardDesign['fontStyle'] => {
 };
 
 const normalizeBackgroundMode = (mode?: string): UserCardDesign['backgroundMode'] => {
-  return mode === 'gif' || mode === 'theme' ? mode : 'theme';
+  return mode === 'gif' || mode === 'theme' || mode === 'image' ? mode : 'theme';
 };
 
 const normalizeGifUrl = (url?: unknown): string | undefined => {
@@ -134,7 +145,7 @@ export async function setUserCardDesign(
     updatedAt: new Date().toISOString(),
   };
 
-  if (updated.backgroundMode !== 'gif') {
+  if (updated.backgroundMode === 'theme') {
     updated.gifUrl = undefined;
   }
 

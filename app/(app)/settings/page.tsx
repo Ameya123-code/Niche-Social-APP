@@ -112,9 +112,9 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-white dark:bg-black">
+    <div className="flex flex-col w-full h-full bg-white dark:bg-black">
       {/* Header */}
-      <div className="px-5 pt-12 pb-4 flex items-center gap-3 border-b border-gray-100 dark:border-gray-900">
+      <div className="px-5 sm:px-6 lg:px-8 pt-4 pb-4 flex items-center gap-3 border-b border-gray-100 dark:border-gray-900">
         <Link href="/profile" className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition">
           <ChevronLeft className="w-5 h-5 text-black dark:text-white" />
         </Link>
@@ -130,7 +130,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Section Tabs */}
-      <div className="flex gap-1 px-4 py-3 border-b border-gray-100 dark:border-gray-900">
+      <div className="flex gap-1 px-5 sm:px-6 lg:px-8 py-3 border-b border-gray-100 dark:border-gray-900">
         {SECTIONS.map((s) => (
           <button
             key={s}
@@ -145,7 +145,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+      <div className="flex-1 overflow-y-auto px-5 sm:px-6 lg:px-8 py-5 space-y-4">
         {activeSection === 'profile' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
             <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Your Identity</p>

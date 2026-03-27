@@ -268,10 +268,10 @@ export default function Auth() {
 
       if (isLogin) {
         setSuccess('Welcome back!');
-        setTimeout(() => router.push('/cards'), 500);
+        setTimeout(() => router.push('/profile'), 500);
       } else {
-        setSuccess(data?.message || 'Account created! Please verify your email.');
-        setTimeout(() => router.push('/auth/verify'), 700);
+        setSuccess('Account created! Now customize your profile card.');
+        setTimeout(() => router.push('/profile'), 700);
       }
     } catch {
       setError('Something went wrong. Please try again.');
@@ -288,7 +288,7 @@ export default function Auth() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#09090e] flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="w-full h-full bg-[#09090e] flex items-center justify-center p-4 relative overflow-hidden">
 
       <div className="absolute inset-0 opacity-35 pointer-events-none" style={{ background: 'radial-gradient(circle at 20% 15%, rgba(251,113,133,0.2), transparent 38%), radial-gradient(circle at 85% 75%, rgba(251,146,60,0.14), transparent 42%)' }} />
 

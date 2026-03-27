@@ -65,9 +65,9 @@ export default function MapPage() {
   });
 
   return (
-    <div className="flex flex-col h-screen bg-white dark:bg-black">
+    <div className="flex flex-col w-full h-full bg-white dark:bg-black">
       {/* Header */}
-      <div className="px-5 pt-12 pb-3 flex-shrink-0">
+      <div className="px-5 sm:px-6 lg:px-8 pt-4 pb-3 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold text-black dark:text-white">Events</h1>
@@ -118,7 +118,7 @@ export default function MapPage() {
       </div>
 
       {/* Events List */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
+      <div className="flex-1 overflow-y-auto px-5 sm:px-6 lg:px-8 pb-4 space-y-3">
         {loading ? (
           <div className="flex justify-center pt-10">
             <div className="w-8 h-8 rounded-full border-4 border-red-500 border-t-transparent animate-spin" />

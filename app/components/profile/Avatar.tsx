@@ -16,7 +16,16 @@ export const DECORATION_FRAMES: Array<{
   { id: 'ice',       label: 'Ice',        ring: 'border-2 border-cyan-300',                     glow: 'shadow-[0_0_12px_rgba(103,232,249,0.55)]' },
   { id: 'emerald',   label: 'Emerald',    ring: 'border-2 border-emerald-400',                  glow: 'shadow-[0_0_12px_rgba(52,211,153,0.5)]' },
   { id: 'fire',      label: 'Fire',       ring: 'border-2 border-orange-400',                   glow: 'shadow-[0_0_14px_rgba(251,146,60,0.65)]' },
-  { id: 'rainbow',   label: 'Rainbow',    ring: 'ring-0',                                   glow: '' },
+  { id: 'rainbow',      label: 'Rainbow',      ring: 'ring-0', glow: '' },
+  { id: 'sapphire',     label: 'Sapphire',     ring: 'border-2 border-blue-400', glow: 'shadow-[0_0_13px_rgba(59,130,246,0.55)]' },
+  { id: 'amethyst',     label: 'Amethyst',     ring: 'border-2 border-violet-400', glow: 'shadow-[0_0_13px_rgba(167,139,250,0.55)]' },
+  { id: 'ruby',         label: 'Ruby',         ring: 'border-2 border-rose-400', glow: 'shadow-[0_0_13px_rgba(251,113,133,0.55)]' },
+  { id: 'obsidian',     label: 'Obsidian',     ring: 'border-2 border-slate-300 dark:border-slate-500', glow: 'shadow-[0_0_11px_rgba(148,163,184,0.4)]' },
+  { id: 'pearl',        label: 'Pearl',        ring: 'border-2 border-zinc-200 dark:border-zinc-300', glow: 'shadow-[0_0_10px_rgba(255,255,255,0.5)]' },
+  { id: 'rainbow-spin', label: 'Rainbow Spin ✨', ring: 'ring-0', glow: '' },
+  { id: 'aurora',       label: 'Aurora Flow ✨',  ring: 'ring-0', glow: '' },
+  { id: 'pulse-neon',   label: 'Neon Pulse ✨',   ring: 'ring-0', glow: '' },
+  { id: 'cyber',        label: 'Cyber Orbit ✨',  ring: 'ring-0', glow: '' },
 ];
 
 // ─── Status Indicator ───────────────────────────────────────────────────────
@@ -48,6 +57,37 @@ function RainbowRing({ children }: { children: React.ReactNode }) {
       style={{ background: 'linear-gradient(135deg,#f43f5e,#f97316,#facc15,#4ade80,#38bdf8,#818cf8,#f43f5e)' }}
     >
       {children}
+    </span>
+  );
+}
+
+function AnimatedRing({
+  children,
+  gradient,
+  duration = '3.8s',
+  pulse = false,
+}: {
+  children: React.ReactNode;
+  gradient: string;
+  duration?: string;
+  pulse?: boolean;
+}) {
+  return (
+    <span className={`relative inline-flex rounded-full p-[2.5px] ${pulse ? 'animate-pulse' : ''}`}>
+      <span
+        className="absolute inset-0 rounded-full"
+        style={{ background: gradient }}
+      />
+      <span
+        className="absolute inset-0 rounded-full animate-spin"
+        style={{
+          background: gradient,
+          opacity: 0.72,
+          mixBlendMode: 'screen',
+          animationDuration: duration,
+        }}
+      />
+      <span className="relative z-10 rounded-full">{children}</span>
     </span>
   );
 }
@@ -108,6 +148,7 @@ export const Avatar = React.memo(function Avatar({
   const frameId = [...decorations].reverse().find((d) => DECORATION_FRAMES.some((f) => f.id === d)) ?? 'none';
   const frame = DECORATION_FRAMES.find((f) => f.id === frameId) ?? DECORATION_FRAMES[0];
   const isRainbow = frame.id === 'rainbow';
+  const isAnimated = ['rainbow-spin', 'aurora', 'pulse-neon', 'cyber'].includes(frame.id);
 
   const inner = (
     <span
@@ -120,6 +161,50 @@ export const Avatar = React.memo(function Avatar({
   );
 
   if (isRainbow) return <RainbowRing>{inner}</RainbowRing>;
+  if (isAnimated) {
+    if (frame.id === 'aurora') {
+      return (
+        <AnimatedRing
+          gradient="linear-gradient(135deg,#22d3ee,#34d399,#a78bfa,#38bdf8,#22d3ee)"
+          duration="5.2s"
+        >
+          {inner}
+        </AnimatedRing>
+      );
+    }
+
+    if (frame.id === 'pulse-neon') {
+      return (
+        <AnimatedRing
+          gradient="linear-gradient(135deg,#f472b6,#a78bfa,#22d3ee,#f472b6)"
+          duration="4.5s"
+          pulse
+        >
+          {inner}
+        </AnimatedRing>
+      );
+    }
+
+    if (frame.id === 'cyber') {
+      return (
+        <AnimatedRing
+          gradient="conic-gradient(from 0deg,#22d3ee,#818cf8,#f43f5e,#22d3ee)"
+          duration="3.2s"
+        >
+          {inner}
+        </AnimatedRing>
+      );
+    }
+
+    return (
+      <AnimatedRing
+        gradient="conic-gradient(from 0deg,#f43f5e,#f97316,#facc15,#4ade80,#38bdf8,#818cf8,#f43f5e)"
+        duration="3.6s"
+      >
+        {inner}
+      </AnimatedRing>
+    );
+  }
   if (frame.id === 'none') return inner;
 
   return <span className={`inline-flex rounded-full ${frame.ring} ${frame.glow}`}>{inner}</span>;

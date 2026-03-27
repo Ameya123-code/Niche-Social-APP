@@ -24,7 +24,7 @@ type DemoCard = {
     stickers: string[];
     borderStyle: 'glass' | 'neon' | 'minimal';
     fontStyle: 'modern' | 'mono' | 'playful';
-    backgroundMode: 'theme' | 'gif';
+    backgroundMode: 'theme' | 'gif' | 'image';
     gifUrl?: string;
     updatedAt: string;
   };
