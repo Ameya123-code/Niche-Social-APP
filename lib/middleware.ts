@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, extractTokenFromHeader } from './auth';
 
-export function withAuth(handler: (req: NextRequest, context: { params: { id?: string } }) => Promise<NextResponse>) {
-  return async (req: NextRequest, context: { params: { id?: string } }) => {
+type RouteContext = { params: { id?: string } };
+type AuthenticatedNextRequest = NextRequest & { userId: string };
+
+export function withAuth(handler: (req: AuthenticatedNextRequest, context: RouteContext) => Promise<NextResponse>) {
+  return async (req: NextRequest, context: RouteContext) => {
     try {
       const token = extractTokenFromHeader(req.headers.get('Authorization') || '');
       
@@ -15,9 +18,10 @@ export function withAuth(handler: (req: NextRequest, context: { params: { id?: s
         return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
       }
 
-      // Add userId to request context
-      (req as any).userId = decoded.userId;
-      return handler(req, context);
+      const authenticatedRequest = req as AuthenticatedNextRequest;
+      authenticatedRequest.userId = decoded.userId;
+
+      return handler(authenticatedRequest, context);
     } catch (error) {
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }

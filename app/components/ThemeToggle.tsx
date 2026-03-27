@@ -18,24 +18,29 @@ function applyTheme(theme: Theme) {
 }
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(() =>
-    typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
-      ? 'dark'
-      : 'light'
-  );
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof document !== 'undefined' && document.documentElement.classList.contains('dark')) {
+      return 'dark';
+    }
+
+    return resolveTheme();
+  });
 
   useEffect(() => {
-    const resolved = resolveTheme();
-    setTheme(resolved);
-    applyTheme(resolved);
+    applyTheme(theme);
 
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('theme', theme);
+    }
+  }, [theme]);
+
+  useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const onMediaChange = () => {
       const saved = localStorage.getItem('theme');
       if (saved === 'dark' || saved === 'light') return;
-      const next = media.matches ? 'dark' : 'light';
-      setTheme(next);
-      applyTheme(next);
+
+      setTheme(media.matches ? 'dark' : 'light');
     };
 
     media.addEventListener('change', onMediaChange);
@@ -45,8 +50,6 @@ export default function ThemeToggle() {
   const toggleTheme = () => {
     setTheme((prev) => {
       const next: Theme = prev === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('theme', next);
-      applyTheme(next);
       return next;
     });
   };

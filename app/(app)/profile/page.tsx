@@ -116,7 +116,7 @@ export default function ProfilePage() {
             </div>
           </div>
           {profile.selfDescription && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 italic">"{profile.selfDescription}"</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 italic">&ldquo;{profile.selfDescription}&rdquo;</p>
           )}
           <Link href="/settings" className="mt-3 block text-center text-xs font-semibold text-red-500 hover:text-red-600 transition">
             Edit Profile →

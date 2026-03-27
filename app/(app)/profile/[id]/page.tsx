@@ -118,7 +118,7 @@ export default function UserProfilePage() {
           <p className="text-center text-green-600 text-sm font-semibold py-2">✓ Rating submitted</p>
         ) : (
           <div className="bg-gray-50 dark:bg-gray-950 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 space-y-3">
-            <p className="text-xs text-gray-500">Rate this person's behavior in the community</p>
+            <p className="text-xs text-gray-500">Rate this person&apos;s behavior in the community</p>
             <div className="flex gap-2">
               {[1, 2, 3, 4, 5].map((s) => (
                 <button key={s} onClick={() => setBehaviorRating(s)} className={`flex-1 py-2 rounded-xl text-xs font-bold transition ${s <= behaviorRating ? 'bg-yellow-400 text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-500'}`}>

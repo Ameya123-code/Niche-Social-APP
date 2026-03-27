@@ -6,7 +6,6 @@ import { VERIFICATION_TYPES } from '@/lib/verification';
 // POST /api/auth/forgot-password/reset
 export async function POST(request: Request) {
   try {
-    const prismaClient = prisma as any;
     const body = await request.json();
     const email = String(body?.email || '').trim().toLowerCase();
     const code = String(body?.code || '').trim();
@@ -21,7 +20,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid reset attempt' }, { status: 400 });
     }
 
-    const token = await prismaClient.verificationToken.findFirst({
+    const token = await prisma.verificationToken.findFirst({
       where: {
         userId: user.id,
         type: VERIFICATION_TYPES.PASSWORD_RESET,
@@ -40,7 +39,7 @@ export async function POST(request: Request) {
 
     await prisma.$transaction([
       prisma.user.update({ where: { id: user.id }, data: { password: hashed } }),
-      prismaClient.verificationToken.update({ where: { id: token.id }, data: { usedAt: new Date() } }),
+      prisma.verificationToken.update({ where: { id: token.id }, data: { usedAt: new Date() } }),
     ]);
 
     return NextResponse.json({ message: 'Password reset successful' }, { status: 200 });

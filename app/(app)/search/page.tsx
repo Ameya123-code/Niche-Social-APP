@@ -36,23 +36,44 @@ export default function SearchPage() {
   const [activeTab, setActiveTab] = useState<'opinions' | 'events'>('opinions');
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query.trim()), 420);
-    return () => clearTimeout(t);
-  }, [query]);
+    let ignore = false;
+    const trimmedQuery = query.trim();
 
-  useEffect(() => {
-    if (!debouncedQuery) { setResults(null); return; }
-    const q = debouncedQuery.replace(/^#/, '');
-    setLoading(true);
-    const token = localStorage.getItem('auth_token');
-    fetch(`/api/search?q=${encodeURIComponent(q)}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((r) => r.json())
-      .then((d) => setResults(d))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [debouncedQuery]);
+    const t = setTimeout(() => {
+      setDebouncedQuery(trimmedQuery);
+
+      if (!trimmedQuery) {
+        setResults(null);
+        setLoading(false);
+        return;
+      }
+
+      const q = trimmedQuery.replace(/^#/, '');
+      const token = localStorage.getItem('auth_token');
+
+      setLoading(true);
+      fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (!ignore) {
+            setResults(d);
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (!ignore) {
+            setLoading(false);
+          }
+        });
+    }, 420);
+
+    return () => {
+      ignore = true;
+      clearTimeout(t);
+    };
+  }, [query]);
 
   const parseHashtags = (s: string) => { try { return JSON.parse(s) as string[]; } catch { return []; } };
 
@@ -65,7 +86,15 @@ export default function SearchPage() {
           <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              const nextQuery = e.target.value;
+              setQuery(nextQuery);
+
+              if (!nextQuery.trim()) {
+                setResults(null);
+                setLoading(false);
+              }
+            }}
             placeholder="Search hashtags, events, people…"
             className="w-full pl-9 pr-10 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl text-sm text-black dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
           />

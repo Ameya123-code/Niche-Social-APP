@@ -173,7 +173,7 @@ export default function EventMap() {
                     whileTap={{ scale: 0.95 }}
                     className="px-8 py-3 bg-red-500 text-white rounded-full font-semibold hover:bg-red-600 transition"
                   >
-                    I'm Going
+                    I&apos;m Going
                   </motion.button>
                 </div>
               </div>
@@ -225,7 +225,7 @@ export default function EventMap() {
               whileHover={{ scale: 1.02 }}
               className="w-full py-3 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition"
             >
-              I'm Going
+              I&apos;m Going
             </motion.button>
           </motion.div>
         )}

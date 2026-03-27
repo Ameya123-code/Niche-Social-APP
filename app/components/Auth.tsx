@@ -597,5 +597,8 @@ export default function Auth() {
               {isLogin ? 'Sign up' : 'Sign in'}
             </button>
           </p>
+        </div>
+      </div>
+    </div>
   );
 }

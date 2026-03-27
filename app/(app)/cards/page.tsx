@@ -73,7 +73,7 @@ export default function CardsPage() {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-4 px-8 text-center">
         <Heart className="w-16 h-16 text-red-200" />
-        <h2 className="text-2xl font-bold text-black dark:text-white">You're all caught up</h2>
+        <h2 className="text-2xl font-bold text-black dark:text-white">You&apos;re all caught up</h2>
         <p className="text-gray-500 text-sm">Check back later for new people near you.</p>
         <button
           onClick={fetchCards}
