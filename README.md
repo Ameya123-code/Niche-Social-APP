@@ -131,7 +131,7 @@ Minimum required:
 
 ## Current Status
 
-- UI redesign: complete
+- UI redesign: complete ( For Landing Page Only)
 - auth backend: active and functional (register/login/me)
 - event/ratings/reports APIs: scaffolded, needs DB-wired implementation
 - frontend-to-auth integration: next step
