@@ -18,40 +18,40 @@ function applyTheme(theme: Theme) {
 }
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof document !== 'undefined' && document.documentElement.classList.contains('dark')) {
-      return 'dark';
-    }
+  // Always start with 'light' to match server render — avoids hydration mismatch.
+  // The real theme is read from localStorage/media in the first useEffect.
+  const [theme, setTheme] = useState<Theme>('light');
+  const [mounted, setMounted] = useState(false);
 
-    return resolveTheme();
-  });
-
+  // Hydrate theme from localStorage / media preference after mount
   useEffect(() => {
+    const initial = resolveTheme();
+    setTheme(initial);
+    applyTheme(initial);
+    setMounted(true);
+  }, []);
+
+  // Sync theme changes to DOM + localStorage
+  useEffect(() => {
+    if (!mounted) return;
     applyTheme(theme);
+    localStorage.setItem('theme', theme);
+  }, [theme, mounted]);
 
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('theme', theme);
-    }
-  }, [theme]);
-
+  // Follow OS-level dark-mode changes when no explicit preference is saved
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const onMediaChange = () => {
       const saved = localStorage.getItem('theme');
       if (saved === 'dark' || saved === 'light') return;
-
       setTheme(media.matches ? 'dark' : 'light');
     };
-
     media.addEventListener('change', onMediaChange);
     return () => media.removeEventListener('change', onMediaChange);
   }, []);
 
   const toggleTheme = () => {
-    setTheme((prev) => {
-      const next: Theme = prev === 'dark' ? 'light' : 'dark';
-      return next;
-    });
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
   return (
@@ -60,8 +60,11 @@ export default function ThemeToggle() {
       onClick={toggleTheme}
       aria-label="Toggle theme"
       className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white/80 text-black shadow-sm backdrop-blur transition hover:scale-105 dark:border-white/10 dark:bg-white/10 dark:text-white"
+      // Suppress the one-frame icon flicker on mount (light→resolved)
+      suppressHydrationWarning
     >
-      {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      {/* Render Moon on server; swap to correct icon once mounted */}
+      {mounted && theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
     </button>
   );
 }

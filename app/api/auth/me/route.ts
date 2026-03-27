@@ -24,6 +24,16 @@ export async function GET(request: NextRequest) {
         createdAt: true,
         updatedAt: true,
         preferences: true,
+        opinions: {
+          select: {
+            id: true,
+            content: true,
+            hashtags: true,
+            createdAt: true,
+            likes: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 

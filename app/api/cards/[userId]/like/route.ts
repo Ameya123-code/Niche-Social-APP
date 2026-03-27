@@ -14,6 +14,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'Cannot like yourself' }, { status: 400 });
     }
 
+    // Demo cards are virtual (not persisted in DB)
+    if (likedUserId.startsWith('demo_')) {
+      return NextResponse.json({ success: true, demo: true }, { status: 200 });
+    }
+
     await prisma.userLike.upsert({
       where: { userId_likedUserId: { userId: authUser.userId, likedUserId } },
       create: { userId: authUser.userId, likedUserId },

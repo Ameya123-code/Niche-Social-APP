@@ -99,41 +99,40 @@ export async function POST(request: Request) {
 
     const token = generateToken({ userId: user.id, email: user.email, isEmailVerified: user.isEmailVerified });
 
-    const verificationCode = generateSixDigitCode();
-
-    await prisma.verificationToken.create({
-      data: {
-        userId: user.id,
-        type: VERIFICATION_TYPES.EMAIL_VERIFY,
-        code: verificationCode,
-        expiresAt: getExpiryDate(15),
-      },
-    });
-
     let emailVerificationSent = true;
+    let devVerificationCode: string | null = null;
     try {
+      const verificationCode = generateSixDigitCode();
+      await prisma.verificationToken.create({
+        data: {
+          userId: user.id,
+          type: VERIFICATION_TYPES.EMAIL_VERIFY,
+          code: verificationCode,
+          expiresAt: getExpiryDate(15),
+        },
+      });
       await sendEmailVerificationCode(user.email, verificationCode);
-    } catch (emailError) {
+      if (process.env.NODE_ENV !== 'production') {
+        devVerificationCode = verificationCode;
+      }
+    } catch {
       emailVerificationSent = false;
-      console.error('Failed to send registration verification email:', emailError);
     }
 
     return NextResponse.json(
       {
         message: emailVerificationSent
           ? 'Account created successfully. Verification code sent to your email.'
-          : 'Account created successfully. Email verification could not be sent right now.',
+          : 'Account created successfully. Verification email could not be sent right now.',
         token,
-        emailVerificationSent,
         user,
+        emailVerificationSent,
+        ...(devVerificationCode ? { devVerificationCode } : {}),
       },
       { status: 201 }
     );
   } catch (error) {
     console.error('Register error:', error);
-    return NextResponse.json(
-      { error: 'Registration failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Registration failed' }, { status: 500 });
   }
 }

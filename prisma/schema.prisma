@@ -39,6 +39,8 @@ model User {
   reportsReceived       Report[]        @relation("reported")
   likes                 UserLike[]
   verificationTokens    VerificationToken[]
+  profile               UserProfile?
+  cardDesign            UserCardDesign?
 
   @@index([email])
   @@index([createdAt])
@@ -211,6 +213,46 @@ model UserBehaviorRating {
   @@unique([ratedUserId, raterUserId])
   @@index([ratedUserId])
   @@index([isFlagged])
+}
+
+// User Profile Customization
+model UserProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatar       String   @default("")
+  banner       String   @default("")
+  avatarType   String   @default("static")   // static | gif
+  bannerType   String   @default("gradient") // static | gif | gradient
+  themePrimary String   @default("#ef4444")
+  themeAccent  String   @default("#f97316")
+  bio          String   @default("")
+  decorations  String   @default("[]")  // JSON string array of frame IDs
+  badges       String   @default("[]")  // JSON string array of badge emojis
+  status       String   @default("online") // online | idle | dnd | offline
+  contexts     String   @default("{}")  // JSON: Record<contextId, ProfileContextData>
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Card Design (Swipe / Discover feed)
+model UserCardDesign {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isCustomized   Boolean  @default(false)
+  themeId        String   @default("rose")
+  stickers       String   @default("[]") // JSON string array
+  borderStyle    String   @default("glass")   // glass | neon | minimal
+  fontStyle      String   @default("modern")  // modern | mono | playful
+  backgroundMode String   @default("theme")   // theme | gif
+  gifUrl         String?
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
 }
 
 // User Report
