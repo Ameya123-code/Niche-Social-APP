@@ -145,8 +145,18 @@ export default function Auth() {
       { opacity: 1, y: 0,  x: 0, stagger: 0.07, duration: 0.4, ease: 'power2.out' },
     );
 
-  const shake = () =>
-    gsap.to(fieldsRef.current, { x: [-7, 7, -5, 5, -3, 3, 0], duration: 0.45, ease: 'power2.out' });
+  const shake = () => {
+    if (!fieldsRef.current) return;
+
+    gsap.timeline({ defaults: { ease: 'power2.out' } })
+      .to(fieldsRef.current, { x: -7, duration: 0.06 })
+      .to(fieldsRef.current, { x: 7, duration: 0.06 })
+      .to(fieldsRef.current, { x: -5, duration: 0.06 })
+      .to(fieldsRef.current, { x: 5, duration: 0.06 })
+      .to(fieldsRef.current, { x: -3, duration: 0.06 })
+      .to(fieldsRef.current, { x: 3, duration: 0.06 })
+      .to(fieldsRef.current, { x: 0, duration: 0.09 });
+  };
 
   const switchMode = () =>
     gsap.to(fieldsRef.current, {
