@@ -34,8 +34,8 @@ function InputField({
     if (!wrapRef.current) return;
     gsap.to(wrapRef.current, {
       boxShadow: focused
-        ? '0 0 0 1.5px rgba(244,63,94,0.45)'
-        : '0 0 0 0px rgba(244,63,94,0)',
+        ? '0 0 0 1.5px rgba(99,102,241,0.42)'
+        : '0 0 0 0px rgba(99,102,241,0)',
       duration: 0.25,
       ease: 'power2.out',
     });
@@ -45,13 +45,13 @@ function InputField({
     <div
       ref={wrapRef}
       className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-colors duration-200 ${
-        focused ? 'border-rose-500/50 bg-white/[0.07]' : 'border-white/10 bg-white/[0.04]'
+        focused ? 'border-indigo-400/50 bg-white/[0.08]' : 'border-white/10 bg-white/[0.04]'
       }`}
     >
-      <Icon className={`w-4 h-4 flex-shrink-0 transition-colors duration-200 ${focused ? 'text-rose-400' : 'text-white/30'}`} />
+      <Icon className={`w-4 h-4 flex-shrink-0 transition-colors duration-200 ${focused ? 'text-indigo-300' : 'text-white/30'}`} />
       <div className="flex-1 relative pt-4 pb-0.5">
         <label className={`absolute left-0 pointer-events-none font-medium transition-all duration-200 ${
-          lifted ? 'top-0 text-[10px] text-rose-400' : 'top-2 text-sm text-white/40'
+          lifted ? 'top-0 text-[10px] text-indigo-300' : 'top-2 text-sm text-white/40'
         }`}>
           {label}
         </label>
@@ -288,12 +288,14 @@ export default function Auth() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#09090e] flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-[#070b16] via-[#0b1324] to-[#090f1f] flex items-center justify-center p-4 relative overflow-hidden">
+
+      <div className="absolute inset-0 opacity-40 pointer-events-none" style={{ background: 'radial-gradient(circle at 20% 15%, rgba(96,165,250,0.16), transparent 38%), radial-gradient(circle at 85% 75%, rgba(45,212,191,0.12), transparent 42%)' }} />
 
       {/* ambient orbs */}
-      <div ref={orb1} className="absolute top-[-8%] left-[-6%] w-[520px] h-[520px] rounded-full bg-rose-600/20 blur-[130px] pointer-events-none" />
-      <div ref={orb2} className="absolute bottom-[-12%] right-[-4%] w-[620px] h-[620px] rounded-full bg-fuchsia-700/14 blur-[150px] pointer-events-none" />
-      <div ref={orb3} className="absolute top-[38%] left-[48%] w-[420px] h-[420px] rounded-full bg-pink-500/10 blur-[110px] pointer-events-none" />
+      <div ref={orb1} className="absolute top-[-8%] left-[-6%] w-[520px] h-[520px] rounded-full bg-indigo-500/20 blur-[130px] pointer-events-none" />
+      <div ref={orb2} className="absolute bottom-[-12%] right-[-4%] w-[620px] h-[620px] rounded-full bg-cyan-600/15 blur-[150px] pointer-events-none" />
+      <div ref={orb3} className="absolute top-[38%] left-[48%] w-[420px] h-[420px] rounded-full bg-violet-500/12 blur-[110px] pointer-events-none" />
 
       {/* card */}
       <div
@@ -304,7 +306,7 @@ export default function Auth() {
         <div
           ref={leftRef}
           className="hidden lg:flex flex-col justify-between p-12 xl:p-16 relative overflow-hidden"
-          style={{ background: 'linear-gradient(135deg,#e11d48 0%,#db2777 45%,#a21caf 100%)' }}
+          style={{ background: 'linear-gradient(140deg,#1e1b4b 0%,#1e293b 48%,#0f766e 100%)' }}
         >
           <div className="absolute -top-16 -right-16 w-80 h-80 rounded-full bg-white/10 blur-3xl pointer-events-none" />
           <div className="absolute -bottom-12 -left-12 w-72 h-72 rounded-full bg-black/20 blur-3xl pointer-events-none" />
@@ -359,7 +361,7 @@ export default function Auth() {
 
           {/* mobile wordmark */}
           <div className="lg:hidden mb-8">
-            <span className="text-3xl font-black bg-gradient-to-r from-rose-400 to-fuchsia-400 bg-clip-text text-transparent">
+            <span className="text-3xl font-black bg-gradient-to-r from-indigo-300 via-sky-300 to-cyan-300 bg-clip-text text-transparent">
               Niche
             </span>
           </div>
@@ -381,7 +383,7 @@ export default function Auth() {
                 <div className="flex gap-1.5">
                   {[1, 2, 3].map(s => (
                     <div key={s} className={`h-1 rounded-full transition-all duration-300 ${
-                      s === step ? 'w-6 bg-rose-500' : s < step ? 'w-4 bg-rose-500/50' : 'w-4 bg-white/10'
+                      s === step ? 'w-6 bg-indigo-400' : s < step ? 'w-4 bg-indigo-300/65' : 'w-4 bg-white/10'
                     }`} />
                   ))}
                 </div>
@@ -423,7 +425,7 @@ export default function Auth() {
                   </div>
                   <div className="a-field flex justify-between pt-1">
                     <button type="button" onClick={() => router.push('/auth/forgot-password')}
-                      className="text-rose-400 hover:text-rose-300 text-xs transition-colors">
+                      className="text-cyan-300 hover:text-cyan-200 text-xs transition-colors">
                       Forgot password?
                     </button>
                     <button type="button" onClick={() => router.push('/auth/verify')}
@@ -467,7 +469,7 @@ export default function Auth() {
                       type="date"
                       value={form.birthDate}
                       onChange={e => updateForm('birthDate', e.target.value)}
-                      className="w-full px-4 py-3.5 rounded-2xl border border-white/10 bg-white/[0.04] text-white text-sm outline-none focus:border-rose-500/50 focus:bg-white/[0.07] transition-all [color-scheme:dark]"
+                      className="w-full px-4 py-3.5 rounded-2xl border border-white/10 bg-white/[0.04] text-white text-sm outline-none focus:border-indigo-400/55 focus:bg-white/[0.08] transition-all [color-scheme:dark]"
                     />
                     <p className="text-[11px] text-white/25 pl-1">Must be 18 or older</p>
                   </div>
@@ -475,13 +477,13 @@ export default function Auth() {
                     <label className="text-[11px] text-white/40 font-medium pl-1 block mb-1.5">
                       Profile photo <span className="text-white/20">(optional)</span>
                     </label>
-                    <label className="flex flex-col items-center justify-center gap-2.5 w-full py-8 rounded-2xl border border-dashed border-white/12 hover:border-rose-500/45 bg-white/[0.02] hover:bg-white/[0.05] cursor-pointer transition-all group">
+                    <label className="flex flex-col items-center justify-center gap-2.5 w-full py-8 rounded-2xl border border-dashed border-white/12 hover:border-cyan-400/45 bg-white/[0.02] hover:bg-white/[0.05] cursor-pointer transition-all group">
                       {form.profileImageUrl ? (
                         <>
-                          <div className="w-11 h-11 rounded-full bg-rose-500/20 flex items-center justify-center">
-                            <Upload className="w-5 h-5 text-rose-400" />
+                          <div className="w-11 h-11 rounded-full bg-cyan-400/20 flex items-center justify-center">
+                            <Upload className="w-5 h-5 text-cyan-300" />
                           </div>
-                          <p className="text-rose-400 text-xs font-medium">Photo uploaded ✓</p>
+                          <p className="text-cyan-300 text-xs font-medium">Photo uploaded ✓</p>
                         </>
                       ) : (
                         <>
@@ -535,7 +537,7 @@ export default function Auth() {
                     <div
                       onClick={() => updateForm('termsAccepted', !form.termsAccepted)}
                       className={`mt-0.5 w-4 h-4 rounded flex-shrink-0 cursor-pointer border transition-all flex items-center justify-center ${
-                        form.termsAccepted ? 'bg-rose-500 border-rose-500' : 'border-white/25 hover:border-rose-500/50'
+                        form.termsAccepted ? 'bg-indigo-500 border-indigo-500' : 'border-white/25 hover:border-indigo-400/50'
                       }`}
                     >
                       {form.termsAccepted && (
@@ -546,9 +548,9 @@ export default function Auth() {
                     </div>
                     <span className="text-[11px] text-white/35 leading-relaxed">
                       I agree to the{' '}
-                      <span className="text-rose-400 hover:underline cursor-pointer">Terms of Service</span>
+                      <span className="text-cyan-300 hover:underline cursor-pointer">Terms of Service</span>
                       {' '}and{' '}
-                      <span className="text-rose-400 hover:underline cursor-pointer">Privacy Policy</span>
+                      <span className="text-cyan-300 hover:underline cursor-pointer">Privacy Policy</span>
                     </span>
                   </div>
                 </>
@@ -572,11 +574,11 @@ export default function Auth() {
                 disabled={isSubmitting}
                 className="a-btn a-field w-full py-[15px] rounded-2xl font-semibold text-sm text-white flex items-center justify-center gap-2 mt-1 transition-all duration-300 active:scale-[0.98] disabled:opacity-55 disabled:cursor-not-allowed"
                 style={{
-                  background: 'linear-gradient(135deg,#f43f5e 0%,#c026d3 100%)',
-                  boxShadow: '0 8px 32px rgba(244,63,94,0.35)',
+                  background: 'linear-gradient(135deg,#4f46e5 0%,#7c3aed 50%,#06b6d4 100%)',
+                  boxShadow: '0 10px 36px rgba(79,70,229,0.35)',
                 }}
-                onMouseEnter={e => gsap.to(e.currentTarget, { scale: 1.015, duration: 0.2 })}
-                onMouseLeave={e => gsap.to(e.currentTarget, { scale: 1,     duration: 0.2 })}
+                onMouseEnter={e => gsap.to(e.currentTarget, { scale: 1.018, y: -1, duration: 0.2 })}
+                onMouseLeave={e => gsap.to(e.currentTarget, { scale: 1, y: 0, duration: 0.2 })}
               >
                 {isSubmitting ? (
                   <>
@@ -602,7 +604,7 @@ export default function Auth() {
             <button
               type="button"
               onClick={switchMode}
-              className="text-rose-400 hover:text-rose-300 font-semibold transition-colors"
+              className="text-cyan-300 hover:text-cyan-200 font-semibold transition-colors"
             >
               {isLogin ? 'Sign up' : 'Sign in'}
             </button>
