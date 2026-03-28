@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { generateSixDigitCode, getExpiryDate, VERIFICATION_TYPES } from '@/lib/verification';
-import { sendPasswordResetCode } from '@/lib/email';
+import { isEmailSenderVerificationError, sendPasswordResetCode } from '@/lib/email';
 
 // POST /api/auth/forgot-password/request
 export async function POST(request: Request) {
@@ -31,7 +31,21 @@ export async function POST(request: Request) {
       },
     });
 
-    await sendPasswordResetCode(user.email, code);
+    try {
+      await sendPasswordResetCode(user.email, code);
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production' && isEmailSenderVerificationError(error)) {
+        return NextResponse.json(
+          {
+            message: 'Dev fallback active because MailerSend sender domain is not verified.',
+            devResetCode: code,
+          },
+          { status: 200 }
+        );
+      }
+
+      throw error;
+    }
 
     return NextResponse.json({ message: 'If this account exists, a reset code has been sent.' }, { status: 200 });
   } catch (error) {

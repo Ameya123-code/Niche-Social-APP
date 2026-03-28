@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 import { generateSixDigitCode, getExpiryDate, VERIFICATION_TYPES } from '@/lib/verification';
-import { isEmailProviderConfigured, sendEmailVerificationCode } from '@/lib/email';
+import { isEmailProviderConfigured, isEmailSenderVerificationError, sendEmailVerificationCode } from '@/lib/email';
 
 // POST /api/auth/verification/email/send
 export async function POST(request: NextRequest) {
@@ -27,8 +27,22 @@ export async function POST(request: NextRequest) {
     });
 
     if (emailConfigured) {
-      await sendEmailVerificationCode(user.email, code);
-      return NextResponse.json({ message: 'Verification code sent to email' }, { status: 200 });
+      try {
+        await sendEmailVerificationCode(user.email, code);
+        return NextResponse.json({ message: 'Verification code sent to email' }, { status: 200 });
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production' && isEmailSenderVerificationError(error)) {
+          return NextResponse.json(
+            {
+              message: 'MailerSend sender domain is not verified. Using dev verification code fallback.',
+              devVerificationCode: code,
+            },
+            { status: 200 }
+          );
+        }
+
+        throw error;
+      }
     }
 
     if (process.env.NODE_ENV !== 'production') {
