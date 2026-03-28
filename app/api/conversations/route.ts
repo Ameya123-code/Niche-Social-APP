@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 import { getLevelFromXp, getUnlockedFeatures } from '@/lib/chat-level';
+import { DEMO_CONVERSATIONS } from '@/lib/demo-chat';
 
 /** Ensures consistent ordering: lower ID is always userA */
 function orderedPair(a: string, b: string): [string, string] {
@@ -60,7 +61,10 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json({ conversations: formatted }, { status: 200 });
+    return NextResponse.json(
+      { conversations: formatted.length > 0 ? formatted : DEMO_CONVERSATIONS },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('GET /api/conversations error:', error);
     return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });

@@ -441,11 +441,16 @@ export default function CardsPage() {
   const handleAction = async (userId: string, action: 'like' | 'pass') => {
     setSwiping(action);
     const token = localStorage.getItem('auth_token');
+    let matchedConversationId: string | null = null;
     try {
-      await fetch(`/api/cards/${userId}/${action}`, {
+      const res = await fetch(`/api/cards/${userId}/${action}`, {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
+      const data = await res.json().catch(() => ({}));
+      if (action === 'like' && data?.matched && typeof data?.conversationId === 'string') {
+        matchedConversationId = data.conversationId;
+      }
     } catch {
       /* ignore */
     }
@@ -453,6 +458,9 @@ export default function CardsPage() {
       setCards((prev) => prev.slice(1));
       setSwiping(null);
       setExpanded(false);
+      if (matchedConversationId) {
+        router.push(`/chat/${matchedConversationId}`);
+      }
     }, 320);
   };
 

@@ -33,6 +33,7 @@ export const pusherChannel = {
 export const PUSHER_EVENTS = {
   NEW_MESSAGE: 'message:new',
   LEVEL_UP: 'level:up',
+  LIKE_RECEIVED: 'like:received',
   TYPING_START: 'client-typing-start',
   TYPING_STOP: 'client-typing-stop',
   MATCH_CREATED: 'match:created',

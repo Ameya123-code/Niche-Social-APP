@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Heart, Map, Search, User } from 'lucide-react';
+import { Heart, Map, Search, User, MessageCircle } from 'lucide-react';
 import ThemeToggle from '@/app/components/ThemeToggle';
+import LikeNotificationPopup from '@/app/components/LikeNotificationPopup';
 
 const NAV = [
   { href: '/cards', icon: Heart, label: 'Discover' },
+  { href: '/chat', icon: MessageCircle, label: 'Chat' },
   { href: '/map', icon: Map, label: 'Events' },
   { href: '/search', icon: Search, label: 'Search' },
   { href: '/profile', icon: User, label: 'Profile' },
@@ -83,6 +85,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="flex-1 pb-20 overflow-y-auto w-full">{children}</main>
+        <LikeNotificationPopup />
         <BottomNav />
       </div>
     </div>
