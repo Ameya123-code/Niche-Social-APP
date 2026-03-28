@@ -2,11 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 import { generateSixDigitCode, getExpiryDate, VERIFICATION_TYPES } from '@/lib/verification';
-import { sendEmailVerificationCode } from '@/lib/email';
+import { isEmailProviderConfigured, sendEmailVerificationCode } from '@/lib/email';
 
 // POST /api/auth/verification/email/send
 export async function POST(request: NextRequest) {
   try {
+    if (!isEmailProviderConfigured()) {
+      return NextResponse.json(
+        {
+          error:
+            process.env.NODE_ENV === 'production'
+              ? 'Email service is temporarily unavailable. Please try again later.'
+              : 'Email provider is not configured. Set RESEND_API_KEY and EMAIL_FROM.',
+        },
+        { status: 503 }
+      );
+    }
+
     const authUser = getUserFromRequest(request);
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 

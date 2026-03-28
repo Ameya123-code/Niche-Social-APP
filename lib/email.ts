@@ -9,9 +9,16 @@ if (resendApiKey) {
   resend = new Resend(resendApiKey);
 }
 
+export function isEmailProviderConfigured() {
+  return Boolean(resend && emailFrom);
+}
+
 function ensureConfigured() {
-  if (!resend || !emailFrom) {
-    throw new Error('Email provider is not configured. Set RESEND_API_KEY and EMAIL_FROM.');
+  if (!isEmailProviderConfigured()) {
+    const missing: string[] = [];
+    if (!resendApiKey) missing.push('RESEND_API_KEY');
+    if (!emailFrom) missing.push('EMAIL_FROM');
+    throw new Error(`Email provider is not configured. Missing: ${missing.join(', ')}.`);
   }
 }
 

@@ -35,7 +35,9 @@ export default function ChatListPage() {
         if (!res.ok) throw new Error('failed');
         const data = await res.json();
         const list = (data?.conversations ?? []) as Conversation[];
-        setConversations(list.length ? list : DEMO_CONVERSATIONS);
+        const byId = new Map<string, Conversation>();
+        [...DEMO_CONVERSATIONS, ...list].forEach((c) => byId.set(c.id, c));
+        setConversations(Array.from(byId.values()));
       } catch {
         setConversations(DEMO_CONVERSATIONS);
       } finally {
@@ -94,9 +96,16 @@ export default function ChatListPage() {
                       <p className="font-semibold text-black dark:text-white truncate">
                         {conv.partner.name}, {conv.partner.age}
                       </p>
-                      <span className="text-[11px] text-gray-400">
-                        LVL {conv.level}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {conv.id.startsWith('demo_conv_') ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                            Demo
+                          </span>
+                        ) : null}
+                        <span className="text-[11px] text-gray-400">
+                          LVL {conv.level}
+                        </span>
+                      </div>
                     </div>
                     <p className="text-xs text-gray-500 truncate mt-0.5">
                       {conv.lastMessage?.content || 'Start your conversation'}

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { generateToken, hashPassword } from '@/lib/auth';
 import { generateSixDigitCode, getExpiryDate, VERIFICATION_TYPES } from '@/lib/verification';
-import { sendEmailVerificationCode } from '@/lib/email';
+import { isEmailProviderConfigured, sendEmailVerificationCode } from '@/lib/email';
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -102,6 +102,22 @@ export async function POST(request: Request) {
     let emailVerificationSent = true;
     let devVerificationCode: string | null = null;
     try {
+      if (!isEmailProviderConfigured()) {
+        emailVerificationSent = false;
+      }
+
+      if (!emailVerificationSent) {
+        return NextResponse.json(
+          {
+            message: 'Account created successfully. Verification email could not be sent right now.',
+            token,
+            user,
+            emailVerificationSent,
+          },
+          { status: 201 }
+        );
+      }
+
       const verificationCode = generateSixDigitCode();
       await prisma.verificationToken.create({
         data: {
