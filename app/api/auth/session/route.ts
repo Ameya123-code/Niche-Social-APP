@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         isEmailVerified: true,
+        isAgeVerified: true,
       },
     });
 
@@ -24,7 +25,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (!user.isEmailVerified) {
-      return NextResponse.json({ error: 'Email not verified' }, { status: 403 });
+      return NextResponse.json({ error: 'Email not verified', requiresVerification: true }, { status: 403 });
+    }
+
+    if (!user.isAgeVerified) {
+      return NextResponse.json({ error: 'Age not verified', requiresVerification: true }, { status: 403 });
     }
 
     return NextResponse.json({ ok: true }, { status: 200 });

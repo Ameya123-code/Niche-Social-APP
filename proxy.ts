@@ -45,7 +45,7 @@ export function proxy(request: NextRequest) {
       }
     }
 
-    if (hasEmailVerifiedClaim && (isAuthPage || isVerifyPage) && isEmailVerified) {
+    if (hasEmailVerifiedClaim && isAuthPage && isEmailVerified) {
       return NextResponse.redirect(new URL('/cards', request.url));
     }
   }
