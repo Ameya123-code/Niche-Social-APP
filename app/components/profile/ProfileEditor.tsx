@@ -1170,7 +1170,7 @@ function LivePreview({ name }: { name: string }) {
     gifUrl?: string;
     stickers?: string[];
   } | null>(null);
-  const loadTimeoutRef = useRef<NodeJS.Timeout>();
+  const loadTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   useEffect(() => {
     const load = async () => {
