@@ -1,21 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const PROTECTED_PATHS = ['/cards', '/map', '/search', '/profile', '/settings', '/events'];
+const PROTECTED_PATHS = ['/cards', '/chat', '/map', '/search', '/profile', '/settings', '/events'];
 
-function decodeJwtPayload(token: string): { isEmailVerified?: boolean } | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length < 2) return null;
-    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = payload + '='.repeat((4 - (payload.length % 4)) % 4);
-    const json = atob(padded);
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
-}
-
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('auth_token')?.value;
 
@@ -33,20 +20,40 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/auth', request.url));
   }
 
-  if (token) {
-    const payload = decodeJwtPayload(token);
-    const hasEmailVerifiedClaim = typeof payload?.isEmailVerified === 'boolean';
-    const isEmailVerified = payload?.isEmailVerified === true;
+  // Always validate verification status from the database via session API.
+  if (token && (isProtected || isAuthPage || isVerifyPage)) {
+    try {
+      const sessionUrl = new URL('/api/auth/session', request.url);
+      const sessionRes = await fetch(sessionUrl, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      });
 
-    // Enforce only when claim is explicitly present to avoid locking legacy sessions.
-    if (hasEmailVerifiedClaim && (isProtected || isAuthPage) && !isEmailVerified) {
-      if (!isVerifyPage) {
-        return NextResponse.redirect(new URL('/auth/verify', request.url));
+      if (sessionRes.status === 200) {
+        if (isAuthPage || isVerifyPage) {
+          return NextResponse.redirect(new URL('/cards', request.url));
+        }
+        return NextResponse.next();
       }
-    }
 
-    if (hasEmailVerifiedClaim && isAuthPage && isEmailVerified) {
-      return NextResponse.redirect(new URL('/cards', request.url));
+      if (sessionRes.status === 403) {
+        if (!isVerifyPage) {
+          return NextResponse.redirect(new URL('/auth/verify', request.url));
+        }
+        return NextResponse.next();
+      }
+
+      if (sessionRes.status === 401) {
+        if (isAuthPage) {
+          return NextResponse.next();
+        }
+        return NextResponse.redirect(new URL('/auth', request.url));
+      }
+    } catch {
+      if (isProtected || isVerifyPage) {
+        return NextResponse.redirect(new URL('/auth', request.url));
+      }
     }
   }
 
