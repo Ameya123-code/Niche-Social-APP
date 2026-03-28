@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Heart, Map, Search, User, MessageCircle } from 'lucide-react';
 import ThemeToggle from '@/app/components/ThemeToggle';
 import LikeNotificationPopup from '@/app/components/LikeNotificationPopup';
@@ -17,6 +18,8 @@ const NAV = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const reduceMotion = useReducedMotion();
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
@@ -78,13 +81,31 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-black overflow-hidden">
       <div className="w-full relative h-full flex flex-col">
-        <header className="sticky top-0 z-40 py-4 backdrop-blur bg-white/70 dark:bg-black/40 border-b border-gray-100 dark:border-gray-800 px-4 sm:px-6 lg:px-8">
+        <motion.header
+          initial={reduceMotion ? undefined : { y: -8, opacity: 0 }}
+          animate={reduceMotion ? undefined : { y: 0, opacity: 1 }}
+          transition={{ duration: 0.24, ease: 'easeOut' }}
+          className="sticky top-0 z-40 py-4 backdrop-blur bg-white/70 dark:bg-black/40 border-b border-gray-100 dark:border-gray-800 px-4 sm:px-6 lg:px-8"
+        >
           <div className="flex items-center justify-between">
             <p className="text-lg font-semibold text-black dark:text-white">Niche</p>
             <ThemeToggle />
           </div>
-        </header>
-        <main className="flex-1 pb-20 overflow-y-auto w-full">{children}</main>
+        </motion.header>
+        <main className="flex-1 pb-20 overflow-y-auto w-full">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={pathname}
+              initial={reduceMotion ? undefined : { opacity: 0, y: 6, scale: 0.995 }}
+              animate={reduceMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
+              exit={reduceMotion ? undefined : { opacity: 0, y: -3, scale: 0.995 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="h-full"
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
+        </main>
         <LikeNotificationPopup />
         <BottomNav />
       </div>
@@ -94,6 +115,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
 function BottomNav() {
   const pathname = usePathname();
+  const reduceMotion = useReducedMotion();
   return (
     <nav className="fixed bottom-0 left-0 w-full bg-white dark:bg-black border-t border-gray-100 dark:border-gray-900 z-50">
       <div className="flex">
@@ -109,11 +131,24 @@ function BottomNav() {
                   : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
               }`}
             >
-              <Icon
-                className={`w-6 h-6 transition-all ${active ? 'scale-110' : ''}`}
-                fill={active && href === '/cards' ? 'currentColor' : 'none'}
-              />
-              <span className={`text-[10px] font-semibold ${active ? 'text-red-500' : ''}`}>
+              <motion.div
+                animate={reduceMotion ? undefined : { y: active ? -1 : 0, scale: active ? 1.08 : 1 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 28, mass: 0.8 }}
+                className="relative"
+              >
+                <Icon
+                  className="w-6 h-6"
+                  fill={active && href === '/cards' ? 'currentColor' : 'none'}
+                />
+                {active ? (
+                  <motion.span
+                    layoutId="active-nav-dot"
+                    className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-red-500"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                ) : null}
+              </motion.div>
+              <span className={`text-[10px] font-semibold transition-colors ${active ? 'text-red-500' : ''}`}>
                 {label}
               </span>
             </Link>

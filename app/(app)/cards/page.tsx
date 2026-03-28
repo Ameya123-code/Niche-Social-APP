@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import {
   Heart,
   ChevronDown,
@@ -256,6 +256,7 @@ const parseGradientCss = (raw?: string): string | undefined => {
 };
 
 const clampLevel = (n: number) => Math.max(1, Math.min(5, n));
+const CARDS_CACHE_KEY = 'discover_cards_cache_v1';
 
 export default function CardsPage() {
   const router = useRouter();
@@ -282,10 +283,19 @@ export default function CardsPage() {
   const [savingDesign, setSavingDesign] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const MAX_INTERESTS = 30;
+  const dragX = useMotionValue(0);
+  const dragRotate = useTransform(dragX, [-180, 0, 180], [-8, 0, 8]);
+  const likeOpacity = useTransform(dragX, [25, 130], [0, 1]);
+  const passOpacity = useTransform(dragX, [-25, -130], [0, 1]);
 
   const openProfileCustomizer = useCallback(() => {
     localStorage.setItem('open_profile_editor_tab', 'card');
     router.push('/profile');
+  }, [router]);
+
+  useEffect(() => {
+    router.prefetch('/chat');
+    router.prefetch('/profile');
   }, [router]);
 
   useEffect(() => {
@@ -297,11 +307,15 @@ export default function CardsPage() {
         return;
       }
       try {
-        const res = await fetch('/api/users/me/card-design', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return;
-        const data = await res.json();
+        const [designRes, meRes] = await Promise.all([
+          fetch('/api/users/me/card-design', {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch('/api/users/me', { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+
+        if (!designRes.ok) return;
+        const data = await designRes.json();
         const design = data?.cardDesign;
         if (design?.themeId && CARD_THEMES.some((t) => t.id === design.themeId)) {
           setSelectedThemeId(design.themeId);
@@ -326,8 +340,6 @@ export default function CardsPage() {
             setGifUrl(design.gifUrl);
           }
         }
-        // Load existing profile avatar
-        const meRes = await fetch('/api/users/me', { headers: { Authorization: `Bearer ${token}` } });
         if (meRes.ok) {
           const meData = await meRes.json() as { user?: { profileImageUrl?: string | null } };
           if (meData?.user?.profileImageUrl) setAvatarPreviewUrl(meData.user.profileImageUrl);
@@ -415,8 +427,8 @@ export default function CardsPage() {
     if (ok) setIsDesignReady(true);
   }, [uploadAvatar, saveMyDesign]);
 
-  const fetchCards = useCallback(async () => {
-    setLoading(true);
+  const fetchCards = useCallback(async (opts?: { background?: boolean }) => {
+    if (!opts?.background) setLoading(true);
     try {
       const token = localStorage.getItem('auth_token');
       const res = await fetch('/api/cards', {
@@ -424,17 +436,33 @@ export default function CardsPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setCards(data.cards ?? []);
+        const next = (data.cards ?? []) as CardUser[];
+        setCards(next);
+        sessionStorage.setItem(CARDS_CACHE_KEY, JSON.stringify(next));
       }
     } catch {
       /* ignore */
     } finally {
-      setLoading(false);
+      if (!opts?.background) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (!isDesignReady) return;
+    const cachedRaw = sessionStorage.getItem(CARDS_CACHE_KEY);
+    if (cachedRaw) {
+      try {
+        const cached = JSON.parse(cachedRaw) as CardUser[];
+        if (Array.isArray(cached) && cached.length > 0) {
+          setCards(cached);
+          setLoading(false);
+          void fetchCards({ background: true });
+          return;
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
     fetchCards();
   }, [fetchCards, isDesignReady]);
 
@@ -455,7 +483,13 @@ export default function CardsPage() {
       /* ignore */
     }
     setTimeout(() => {
-      setCards((prev) => prev.slice(1));
+      setCards((prev) => {
+        const next = prev.slice(1);
+        sessionStorage.setItem(CARDS_CACHE_KEY, JSON.stringify(next));
+        if (next.length <= 2) void fetchCards({ background: true });
+        return next;
+      });
+      dragX.set(0);
       setSwiping(null);
       setExpanded(false);
       if (matchedConversationId) {
@@ -876,7 +910,9 @@ export default function CardsPage() {
         <h2 className="text-2xl font-bold text-black dark:text-white">You&apos;re all caught up</h2>
         <p className="text-gray-500 text-sm">No more opinion cards right now.</p>
         <button
-          onClick={fetchCards}
+          onClick={() => {
+            void fetchCards();
+          }}
           className="mt-2 px-8 py-3 bg-red-500 text-white rounded-full font-semibold hover:bg-red-600 transition"
         >
           Refresh
@@ -976,6 +1012,7 @@ export default function CardsPage() {
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={0.9}
                 dragDirectionLock
+                style={swiping ? undefined : { x: dragX, rotate: dragRotate, willChange: 'transform' }}
                 whileDrag={{ scale: 0.98 }}
                 onDragEnd={(_, info) => {
                   if (swiping) return;
@@ -985,10 +1022,24 @@ export default function CardsPage() {
                   }
                   if (info.offset.x < -110 || info.velocity.x < -550) {
                     handleAction(card.id, 'pass');
+                    return;
                   }
+                  dragX.set(0);
                 }}
-                className="w-full"
+                className="w-full relative"
               >
+                <motion.div
+                  style={{ opacity: likeOpacity }}
+                  className="absolute left-4 top-4 z-20 px-3 py-1.5 rounded-full bg-emerald-500/90 text-white text-xs font-semibold shadow"
+                >
+                  LIKE
+                </motion.div>
+                <motion.div
+                  style={{ opacity: passOpacity }}
+                  className="absolute right-4 top-4 z-20 px-3 py-1.5 rounded-full bg-zinc-900/85 text-white text-xs font-semibold shadow"
+                >
+                  PASS
+                </motion.div>
                 <ProfileCard
                   avatarUrl={card.profileImageUrl || ''}
                   bannerUrl=""
