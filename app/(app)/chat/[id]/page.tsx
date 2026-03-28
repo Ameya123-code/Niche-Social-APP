@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Pusher from 'pusher-js';
-import { ArrowLeft, Send, Zap } from 'lucide-react';
+import { ArrowLeft, Send, Zap, Image as ImageIcon, Video, Phone, Smile, PhoneCall, VideoIcon } from 'lucide-react';
 import { DEMO_CONVERSATIONS, DEMO_MESSAGES } from '@/lib/demo-chat';
 
 type Partner = { id: string; name: string; age: number; city?: string; profileImageUrl?: string | null };
@@ -35,8 +35,13 @@ export default function ChatDetailPage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [myId, setMyId] = useState('');
   const [text, setText] = useState('');
+  const [gifUrl, setGifUrl] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
   const [sending, setSending] = useState(false);
   const [xpHint, setXpHint] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [callHint, setCallHint] = useState('');
+  const [placingCall, setPlacingCall] = useState(false);
 
   const isDemo = id?.startsWith('demo_conv_');
 
@@ -116,36 +121,89 @@ export default function ChatDetailPage() {
         setTimeout(() => setXpHint(''), 2200);
       }
     };
+    const onCallSignal = (payload: { type?: string; mode?: 'voice' | 'video'; fromUserId?: string }) => {
+      if (!payload?.type || payload.fromUserId === myId) return;
+      if (payload.type === 'call_request') {
+        setCallHint(`Incoming ${payload.mode === 'video' ? 'video' : 'voice'} call request`);
+        setTimeout(() => setCallHint(''), 2800);
+      }
+    };
     channel.bind('message:new', onMessage);
+    channel.bind('call:signal', onCallSignal);
 
     return () => {
       channel.unbind('message:new', onMessage);
+      channel.unbind('call:signal', onCallSignal);
       pusher.unsubscribe(`private-conv-${id}`);
       pusher.disconnect();
     };
-  }, [id, isDemo]);
+  }, [id, isDemo, myId]);
 
   const canSend = useMemo(() => {
     if (!conversation) return false;
     return (conversation.level ?? 1) >= 1;
   }, [conversation]);
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!text.trim() || sending || !conversation) return;
+  const unlocked = useMemo(() => new Set(conversation?.unlockedFeatures ?? ['text']), [conversation]);
+  const canEmoji = unlocked.has('emoji');
+  const canGif = unlocked.has('gif');
+  const canImage = unlocked.has('image');
+  const canVideo = unlocked.has('video');
+  const canVoiceCall = unlocked.has('voice_call');
+  const canVideoCall = unlocked.has('video_call');
+
+  const sendCallRequest = async (mode: 'voice' | 'video') => {
+    if (!conversation) return;
+
+    const allowed = mode === 'video' ? canVideoCall : canVoiceCall;
+    if (!allowed) {
+      setCallHint(mode === 'video' ? 'Video calls unlock at LVL 25' : 'Voice calls unlock at LVL 20');
+      setTimeout(() => setCallHint(''), 2200);
+      return;
+    }
+
+    if (isDemo) {
+      setCallHint(`${mode === 'video' ? 'Video' : 'Voice'} call requested (demo)`);
+      setTimeout(() => setCallHint(''), 2200);
+      return;
+    }
+
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+
+    setPlacingCall(true);
+    try {
+      const res = await fetch(`/api/conversations/${id}/call/signal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ type: 'call_request', mode }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      setCallHint(res.ok ? `${mode === 'video' ? 'Video' : 'Voice'} call request sent` : data?.error || 'Call request failed');
+      setTimeout(() => setCallHint(''), 2200);
+    } finally {
+      setPlacingCall(false);
+    }
+  };
+
+  const sendTypedMessage = async (type: string, content: string) => {
+    if (!content.trim() || !conversation) return;
 
     if (isDemo) {
       const newMsg: Msg = {
         id: `demo_local_${Date.now()}`,
         senderId: myId || 'me',
         sender: { id: myId || 'me', name: 'You' },
-        content: text.trim(),
-        type: 'text',
+        content: content.trim(),
+        type,
         xpAwarded: 2,
         createdAt: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, newMsg]);
-      setText('');
       return;
     }
 
@@ -160,13 +218,12 @@ export default function ChatDetailPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ type: 'text', content: text.trim() }),
+        body: JSON.stringify({ type, content: content.trim() }),
       });
 
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.message) {
         setMessages((prev) => [...prev, data.message]);
-        setText('');
       }
       if (data?.xpReason && data.xpReason !== 'ok') {
         setXpHint(data.xpReason.replaceAll('_', ' '));
@@ -175,6 +232,36 @@ export default function ChatDetailPage() {
     } finally {
       setSending(false);
     }
+  };
+
+  const uploadAndSendImage = async (file: File) => {
+    if (!canImage) return;
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+
+    setUploadingImage(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const upRes = await fetch('/api/uploads/image', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      });
+      const up = await upRes.json().catch(() => ({}));
+      if (upRes.ok && up?.url) {
+        await sendTypedMessage('image', up.url);
+      }
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!text.trim() || sending || !conversation) return;
+    await sendTypedMessage('text', text);
+    setText('');
   };
 
   if (loading || !conversation) {
@@ -205,12 +292,38 @@ export default function ChatDetailPage() {
           </p>
           <p className="text-xs text-rose-500">LVL {conversation.level} · {conversation.totalXp} XP</p>
         </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => sendCallRequest('voice')}
+            disabled={placingCall || !canVoiceCall}
+            title={canVoiceCall ? 'Start voice call' : 'Unlocks at LVL 20'}
+            className="h-9 w-9 rounded-lg border border-gray-300 dark:border-gray-700 disabled:opacity-40 inline-flex items-center justify-center"
+          >
+            <PhoneCall className="w-4 h-4 text-gray-700 dark:text-gray-200" />
+          </button>
+          <button
+            type="button"
+            onClick={() => sendCallRequest('video')}
+            disabled={placingCall || !canVideoCall}
+            title={canVideoCall ? 'Start video call' : 'Unlocks at LVL 25'}
+            className="h-9 w-9 rounded-lg border border-gray-300 dark:border-gray-700 disabled:opacity-40 inline-flex items-center justify-center"
+          >
+            <VideoIcon className="w-4 h-4 text-gray-700 dark:text-gray-200" />
+          </button>
+        </div>
       </header>
 
       <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-900 flex items-center gap-2 text-xs text-gray-500">
         <Zap className="w-3.5 h-3.5 text-rose-500" />
         Unlocked: {conversation.unlockedFeatures.join(', ') || 'text'}
       </div>
+
+      {callHint ? (
+        <div className="px-4 py-2 text-xs border-b border-gray-100 dark:border-gray-900 bg-blue-50/70 dark:bg-blue-950/30 text-blue-700 dark:text-blue-200">
+          {callHint}
+        </div>
+      ) : null}
 
       <main className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
         {messages.map((m) => {
@@ -223,7 +336,28 @@ export default function ChatDetailPage() {
                   : 'bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-gray-100 rounded-bl-md'
                 }`}
               >
-                <p>{m.content}</p>
+                {m.type === 'image' ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.content} alt="sent image" className="max-h-64 rounded-lg" />
+                ) : m.type === 'gif' ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.content} alt="sent gif" className="max-h-64 rounded-lg" />
+                ) : m.type === 'video' ? (
+                  <a
+                    href={m.content}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`underline ${mine ? 'text-rose-100' : 'text-blue-600 dark:text-blue-400'}`}
+                  >
+                    🎬 Open video
+                  </a>
+                ) : m.type === 'voice_note' ? (
+                  <p>📞 Voice call request sent</p>
+                ) : m.type === 'emoji' ? (
+                  <p className="text-2xl leading-none">{m.content}</p>
+                ) : (
+                  <p>{m.content}</p>
+                )}
                 <p className={`text-[10px] mt-1 ${mine ? 'text-rose-100' : 'text-gray-500'}`}>
                   {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   {typeof m.xpAwarded === 'number' ? ` · +${m.xpAwarded}xp` : ''}
@@ -238,6 +372,86 @@ export default function ChatDetailPage() {
         {xpHint ? (
           <p className="text-[11px] mb-1 text-amber-500">No XP: {xpHint}</p>
         ) : null}
+
+        <div className="mb-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={!canEmoji || sending}
+            onClick={() => sendTypedMessage('emoji', '🔥')}
+            className="h-8 px-2.5 rounded-lg border border-gray-300 dark:border-gray-700 text-xs disabled:opacity-40 inline-flex items-center gap-1"
+          >
+            <Smile className="w-3.5 h-3.5" /> Emoji
+          </button>
+
+          <div className="h-8 px-2.5 rounded-lg border border-gray-300 dark:border-gray-700 text-xs inline-flex items-center gap-1">
+            <ImageIcon className="w-3.5 h-3.5" />
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              disabled={!canImage || uploadingImage || sending}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadAndSendImage(file);
+                e.currentTarget.value = '';
+              }}
+              className="text-[10px] w-[120px]"
+            />
+          </div>
+
+          <button
+            type="button"
+            disabled={!canVoiceCall || sending}
+            onClick={() => sendTypedMessage('voice_note', 'Voice call request')}
+            className="h-8 px-2.5 rounded-lg border border-gray-300 dark:border-gray-700 text-xs disabled:opacity-40 inline-flex items-center gap-1"
+          >
+            <Phone className="w-3.5 h-3.5" /> Voice call
+          </button>
+        </div>
+
+        <div className="mb-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="flex gap-1.5">
+            <input
+              value={gifUrl}
+              onChange={(e) => setGifUrl(e.target.value)}
+              placeholder={canGif ? 'GIF URL' : 'GIF unlocks at LVL 5'}
+              disabled={!canGif || sending}
+              className="flex-1 h-9 rounded-lg border border-gray-300 dark:border-gray-700 px-2.5 text-xs bg-white dark:bg-zinc-900 disabled:opacity-40"
+            />
+            <button
+              type="button"
+              disabled={!canGif || !gifUrl.trim() || sending}
+              onClick={async () => {
+                await sendTypedMessage('gif', gifUrl.trim());
+                setGifUrl('');
+              }}
+              className="h-9 px-3 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs disabled:opacity-40"
+            >
+              Send GIF
+            </button>
+          </div>
+
+          <div className="flex gap-1.5">
+            <input
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder={canVideo ? 'Video URL' : 'Video unlocks at LVL 15'}
+              disabled={!canVideo || sending}
+              className="flex-1 h-9 rounded-lg border border-gray-300 dark:border-gray-700 px-2.5 text-xs bg-white dark:bg-zinc-900 disabled:opacity-40"
+            />
+            <button
+              type="button"
+              disabled={!canVideo || !videoUrl.trim() || sending}
+              onClick={async () => {
+                await sendTypedMessage('video', videoUrl.trim());
+                setVideoUrl('');
+              }}
+              className="h-9 px-3 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs disabled:opacity-40 inline-flex items-center gap-1"
+            >
+              <Video className="w-3.5 h-3.5" /> Send
+            </button>
+          </div>
+        </div>
+
         <div className="flex items-center gap-2">
           <input
             value={text}
