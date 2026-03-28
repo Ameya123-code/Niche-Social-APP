@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Calendar, Users, Search, Music, Utensils, Dumbbell, Palette, Plus, X, Star, ChevronRight } from 'lucide-react';
+import { MapPin, Calendar, Users, Search, Music, Utensils, Dumbbell, Palette, Plus, X, ChevronRight, ArrowUpDown, Flame } from 'lucide-react';
 import Link from 'next/link';
 
 const CATEGORIES = [
@@ -33,6 +33,7 @@ export default function MapPage() {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'soonest' | 'popular' | 'newest'>('soonest');
   const [selected, setSelected] = useState<EventItem | null>(null);
 
   useEffect(() => {
@@ -62,7 +63,17 @@ export default function MapPage() {
     if (category !== 'all' && e.category !== category) return false;
     if (search && !e.title.toLowerCase().includes(search.toLowerCase()) && !e.city.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
+  }).sort((a, b) => {
+    if (sortBy === 'popular') return (b._count?.attendees ?? 0) - (a._count?.attendees ?? 0);
+    if (sortBy === 'newest') return +new Date(b.startDate) - +new Date(a.startDate);
+    return +new Date(a.startDate) - +new Date(b.startDate);
   });
+
+  const todayCount = filtered.filter((e) => {
+    const d = new Date(e.startDate);
+    const now = new Date();
+    return d.toDateString() === now.toDateString();
+  }).length;
 
   return (
     <div className="flex flex-col w-full h-full bg-white dark:bg-black">
@@ -80,6 +91,17 @@ export default function MapPage() {
             <Plus className="w-4 h-4" />
             Create
           </Link>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-2.5 bg-white dark:bg-zinc-950">
+            <p className="text-[10px] uppercase tracking-wide text-gray-500">Today</p>
+            <p className="text-sm font-semibold text-black dark:text-white">{todayCount} events</p>
+          </div>
+          <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-2.5 bg-white dark:bg-zinc-950">
+            <p className="text-[10px] uppercase tracking-wide text-gray-500">Trending</p>
+            <p className="text-sm font-semibold text-black dark:text-white inline-flex items-center gap-1"><Flame className="w-3.5 h-3.5 text-orange-500" /> Popular now</p>
+          </div>
         </div>
 
         {/* Search */}
@@ -115,13 +137,37 @@ export default function MapPage() {
             </button>
           ))}
         </div>
+
+        <div className="mt-2 flex items-center gap-2 text-xs">
+          <span className="inline-flex items-center gap-1 text-gray-500"><ArrowUpDown className="w-3 h-3" /> Sort</span>
+          {([
+            { id: 'soonest', label: 'Soonest' },
+            { id: 'popular', label: 'Popular' },
+            { id: 'newest', label: 'Newest' },
+          ] as const).map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => setSortBy(opt.id)}
+              className={`px-2.5 py-1 rounded-full border transition ${sortBy === opt.id ? 'border-red-500 text-red-600 bg-red-50 dark:bg-red-900/20' : 'border-gray-200 dark:border-gray-700 text-gray-500'}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Events List */}
       <div className="flex-1 overflow-y-auto px-5 sm:px-6 lg:px-8 pb-4 space-y-3">
         {loading ? (
-          <div className="flex justify-center pt-10">
-            <div className="w-8 h-8 rounded-full border-4 border-red-500 border-t-transparent animate-spin" />
+          <div className="space-y-3 pt-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-2xl border border-gray-100 dark:border-gray-800 p-4 animate-pulse bg-gray-50 dark:bg-zinc-900/40">
+                <div className="w-full h-28 rounded-xl bg-gray-200 dark:bg-zinc-800 mb-3" />
+                <div className="h-4 w-2/3 bg-gray-200 dark:bg-zinc-800 rounded mb-2" />
+                <div className="h-3 w-full bg-gray-200 dark:bg-zinc-800 rounded mb-2" />
+                <div className="h-3 w-1/2 bg-gray-200 dark:bg-zinc-800 rounded" />
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center pt-16">
@@ -137,6 +183,7 @@ export default function MapPage() {
                 key={event.id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -2, scale: 1.004 }}
                 onClick={() => setSelected(event)}
                 className="w-full text-left bg-gray-50 dark:bg-gray-950 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 hover:border-red-300 dark:hover:border-red-800 transition"
               >

@@ -42,6 +42,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
 
+    const myAttendance = await prisma.eventAttendee.findUnique({
+      where: {
+        eventId_userId: { eventId: id, userId: authUser.userId },
+      },
+      select: { id: true },
+    });
+
     // Calculate average rating
     const avgRating = event.ratings.length > 0
       ? event.ratings.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / event.ratings.length
@@ -56,6 +63,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           date: event.startDate,
           imageUrl: event.coverImageUrl,
           avgRating,
+          isAttending: Boolean(myAttendance),
         },
       },
       { status: 200 }

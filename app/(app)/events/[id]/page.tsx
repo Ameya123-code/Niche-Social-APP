@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, MapPin, Calendar, Users, Star, Flag } from 'lucide-react';
+import { ChevronLeft, MapPin, Calendar, Users, Star, Flag, Share2, Clock3 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
@@ -20,7 +20,8 @@ interface EventDetail {
   hashtags: string;
   discountPercent?: number;
   isPersonal: boolean;
-  creator: { id: string; name: string; age: number };
+  isAttending?: boolean;
+  creator: { id: string; name: string; age: number; profileImageUrl?: string | null };
   _count: { attendees: number; ratings: number };
   ratings: { rating: number; review?: string; userId: string; user: { name: string } }[];
 }
@@ -34,6 +35,7 @@ export default function EventDetailPage() {
   const [review, setReview] = useState('');
   const [submittingRating, setSubmittingRating] = useState(false);
   const [ratingDone, setRatingDone] = useState(false);
+  const [shareHint, setShareHint] = useState('');
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
 
@@ -54,11 +56,33 @@ export default function EventDetailPage() {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        setEvent((e) => e ? { ...e, _count: { ...e._count, attendees: e._count.attendees + 1 } } : e);
+        setEvent((e) => {
+          if (!e) return e;
+          const nextAttending = Boolean(data?.attending);
+          const nextCount = Math.max(0, e._count.attendees + (nextAttending ? 1 : -1));
+          return { ...e, isAttending: nextAttending, _count: { ...e._count, attendees: nextCount } };
+        });
       }
     } catch { /* ignore */ }
     finally { setAttending(false); }
+  };
+
+  const shareEvent = async () => {
+    if (!event) return;
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: event.title, text: `Join me at ${event.title}`, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShareHint('Link copied');
+        setTimeout(() => setShareHint(''), 1800);
+      }
+    } catch {
+      // ignore
+    }
   };
 
   const submitRating = async () => {
@@ -86,9 +110,15 @@ export default function EventDetailPage() {
   const tags = parseHashtags(event.hashtags);
   const start = new Date(event.startDate);
   const end = new Date(event.endDate);
+  const now = Date.now();
+  const msUntilStart = start.getTime() - now;
+  const hoursUntilStart = Math.max(0, Math.floor(msUntilStart / (1000 * 60 * 60)));
+  const capacityPct = event.maxAttendees
+    ? Math.min(100, Math.round((event._count.attendees / Math.max(1, event.maxAttendees)) * 100))
+    : null;
 
   return (
-    <div className="w-full h-full bg-white dark:bg-black pb-8">
+    <div className="w-full h-full bg-gradient-to-b from-white to-rose-50/30 dark:from-black dark:to-zinc-950 pb-8">
       {/* Cover + back */}
       <div className="relative">
         {event.coverImageUrl ? (
@@ -112,6 +142,20 @@ export default function EventDetailPage() {
       </div>
 
       <div className="px-5 sm:px-6 lg:px-8 py-5 space-y-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="inline-flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+            <Clock3 className="w-3.5 h-3.5 text-red-500" />
+            {msUntilStart > 0 ? `Starts in ~${hoursUntilStart}h` : 'Started'}
+          </div>
+          <button
+            onClick={shareEvent}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-800 text-xs"
+          >
+            <Share2 className="w-3.5 h-3.5" /> Share
+          </button>
+        </div>
+        {shareHint ? <p className="text-[11px] text-green-600">{shareHint}</p> : null}
+
         {/* Meta grid */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-gray-50 dark:bg-gray-950 border border-gray-100 dark:border-gray-800 rounded-2xl p-3">
@@ -141,6 +185,18 @@ export default function EventDetailPage() {
           </div>
         </div>
 
+        {event.maxAttendees ? (
+          <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 p-3">
+            <div className="flex items-center justify-between text-xs mb-2">
+              <span className="text-gray-500">Capacity</span>
+              <span className="font-semibold text-gray-700 dark:text-gray-200">{event._count.attendees}/{event.maxAttendees}</span>
+            </div>
+            <div className="h-2 rounded-full bg-gray-200 dark:bg-zinc-800 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-red-500 to-fuchsia-500" style={{ width: `${capacityPct ?? 0}%` }} />
+            </div>
+          </div>
+        ) : null}
+
         {/* Description */}
         <div>
           <h3 className="font-bold text-black dark:text-white mb-2">About</h3>
@@ -157,7 +213,12 @@ export default function EventDetailPage() {
           <h3 className="font-bold text-black dark:text-white mb-2">Organizer</h3>
           <Link href={`/profile/${event.creator.id}`} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-950 border border-gray-100 dark:border-gray-800 rounded-2xl hover:border-red-300 transition">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-100 to-pink-200 flex items-center justify-center">
-              <span className="font-bold text-red-400">{event.creator.name[0]}</span>
+              {event.creator.profileImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={event.creator.profileImageUrl} alt={event.creator.name} className="w-full h-full rounded-xl object-cover" />
+              ) : (
+                <span className="font-bold text-red-400">{event.creator.name[0]}</span>
+              )}
             </div>
             <div>
               <p className="text-sm font-semibold text-black dark:text-white">{event.creator.name}</p>
@@ -199,9 +260,9 @@ export default function EventDetailPage() {
         <button
           onClick={handleAttend}
           disabled={attending}
-          className="w-full py-4 bg-red-500 text-white rounded-2xl font-bold hover:bg-red-600 disabled:opacity-50 transition shadow-lg shadow-red-200 dark:shadow-red-900/30 text-base"
+          className={`w-full py-4 rounded-2xl font-bold disabled:opacity-50 transition shadow-lg text-base ${event.isAttending ? 'bg-gray-900 text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-gray-200' : 'bg-red-500 text-white hover:bg-red-600 shadow-red-200 dark:shadow-red-900/30'}`}
         >
-          {attending ? 'Joining…' : "I'm Going →"}
+          {attending ? 'Updating…' : event.isAttending ? 'Leave event' : "I'm Going →"}
         </button>
 
         {/* Report */}

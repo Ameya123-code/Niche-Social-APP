@@ -80,6 +80,9 @@ export async function POST(request: NextRequest) {
       endDate,
       category,
       maxAttendees,
+      hashtags,
+      isPersonal,
+      discountPercent,
       imageUrl,
       coverImageUrl,
       latitude,
@@ -92,9 +95,28 @@ export async function POST(request: NextRequest) {
     const normalizedEndDate = endDate
       ? new Date(endDate)
       : new Date(normalizedStartDate.getTime() + 2 * 60 * 60 * 1000);
+    const normalizedCategory = String(category || '').toLowerCase().trim();
 
-    if (!title || !normalizedAddress || Number.isNaN(normalizedStartDate.getTime()) || !category) {
+    let parsedHashtags: string[] = [];
+    if (Array.isArray(hashtags)) {
+      parsedHashtags = hashtags.filter((t): t is string => typeof t === 'string');
+    } else if (typeof hashtags === 'string') {
+      parsedHashtags = hashtags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
+    }
+    const normalizedHashtags = [...new Set(parsedHashtags.map((t) => t.replace(/^#/, '').toLowerCase()))].slice(0, 20);
+
+    const normalizedDiscount = Math.max(0, Math.min(90, Number(discountPercent ?? 0) || 0));
+    const normalizedIsPersonal = Boolean(isPersonal);
+
+    if (!title || !normalizedAddress || Number.isNaN(normalizedStartDate.getTime()) || !normalizedCategory) {
       return NextResponse.json({ error: 'Title, location/date, and category are required' }, { status: 400 });
+    }
+
+    if (normalizedEndDate.getTime() <= normalizedStartDate.getTime()) {
+      return NextResponse.json({ error: 'End date must be after start date' }, { status: 400 });
     }
 
     const event = await prisma.event.create({
@@ -107,8 +129,11 @@ export async function POST(request: NextRequest) {
         city: normalizedCity || 'Unknown',
         startDate: normalizedStartDate,
         endDate: normalizedEndDate,
-        category,
+        category: normalizedCategory,
+        hashtags: JSON.stringify(normalizedHashtags),
         maxAttendees: maxAttendees ? Number(maxAttendees) : null,
+        isPersonal: normalizedIsPersonal,
+        discountPercent: normalizedDiscount,
         coverImageUrl: coverImageUrl ?? imageUrl ?? null,
         creatorId: authUser.userId,
       },
