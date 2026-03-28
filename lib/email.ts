@@ -1,45 +1,57 @@
-import { Resend } from 'resend';
-
-const resendApiKey = process.env.RESEND_API_KEY;
+const mailerSendApiKey = process.env.MAILERSEND_API_KEY;
 const emailFrom = process.env.EMAIL_FROM;
 
-let resend: Resend | null = null;
-
-if (resendApiKey) {
-  resend = new Resend(resendApiKey);
-}
-
 export function isEmailProviderConfigured() {
-  return Boolean(resend && emailFrom);
+  return Boolean(mailerSendApiKey && emailFrom);
 }
 
 function ensureConfigured() {
   if (!isEmailProviderConfigured()) {
     const missing: string[] = [];
-    if (!resendApiKey) missing.push('RESEND_API_KEY');
+    if (!mailerSendApiKey) missing.push('MAILERSEND_API_KEY');
     if (!emailFrom) missing.push('EMAIL_FROM');
     throw new Error(`Email provider is not configured. Missing: ${missing.join(', ')}.`);
   }
 }
 
-export async function sendEmailVerificationCode(to: string, code: string) {
+async function sendMailerSendEmail(to: string, subject: string, html: string, text: string) {
   ensureConfigured();
 
-  await resend!.emails.send({
-    from: emailFrom!,
-    to,
-    subject: 'Verify your email',
-    html: `<p>Your verification code is <strong>${code}</strong>.</p><p>This code expires in 15 minutes.</p>`,
+  const response = await fetch('https://api.mailersend.com/v1/email', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${mailerSendApiKey!}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: { email: emailFrom! },
+      to: [{ email: to }],
+      subject,
+      html,
+      text,
+    }),
   });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`MailerSend request failed (${response.status}): ${body || 'Unknown error'}`);
+  }
+}
+
+export async function sendEmailVerificationCode(to: string, code: string) {
+  await sendMailerSendEmail(
+    to,
+    'Verify your email',
+    `<p>Your verification code is <strong>${code}</strong>.</p><p>This code expires in 15 minutes.</p>`,
+    `Your verification code is ${code}. This code expires in 15 minutes.`
+  );
 }
 
 export async function sendPasswordResetCode(to: string, code: string) {
-  ensureConfigured();
-
-  await resend!.emails.send({
-    from: emailFrom!,
+  await sendMailerSendEmail(
     to,
-    subject: 'Reset your password',
-    html: `<p>Your password reset code is <strong>${code}</strong>.</p><p>This code expires in 15 minutes.</p>`,
-  });
+    'Reset your password',
+    `<p>Your password reset code is <strong>${code}</strong>.</p><p>This code expires in 15 minutes.</p>`,
+    `Your password reset code is ${code}. This code expires in 15 minutes.`
+  );
 }
