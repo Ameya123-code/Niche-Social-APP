@@ -853,8 +853,8 @@ export default function CardsPage() {
               themeId={selectedThemeId}
               borderStyle={borderStyle}
               fontStyle={fontStyle}
-              backgroundMode={backgroundMode === 'gif' || backgroundMode === 'image' ? backgroundMode : 'theme'}
-              gifUrl={backgroundMode === 'gif' ? gifUrl : undefined}
+              backgroundMode={backgroundMode}
+              gifUrl={backgroundMode === 'gif' || backgroundMode === 'image' ? gifUrl : undefined}
               innerGradient={backgroundMode === 'gradient' ? `linear-gradient(${gradientAngle}deg, ${gradientColors.join(', ')})` : undefined}
               enableTilt={false}
               showUserInfo={false}
@@ -997,7 +997,7 @@ export default function CardsPage() {
                   themeId={displayedThemeId}
                   borderStyle={displayedBorderStyle}
                   fontStyle={displayedFontStyle}
-                  backgroundMode={displayedBackgroundMode === 'gif' || displayedBackgroundMode === 'image' ? displayedBackgroundMode : 'theme'}
+                  backgroundMode={displayedBackgroundMode}
                   gifUrl={displayedBackgroundMode === 'gif' || displayedBackgroundMode === 'image' ? displayedGifUrl : undefined}
                   innerGradient={displayedBackgroundMode === 'gradient' ? parseGradientCss(displayedGifUrl) : undefined}
                   enableTilt={false}

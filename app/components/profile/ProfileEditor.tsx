@@ -603,30 +603,13 @@ function CardStylePanel() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
 
-  // Load existing card design
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (!token) return;
-    fetch('/api/users/me/card-design', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => {
-        const cd = d?.cardDesign;
-        if (!cd) return;
-        if (CARD_THEMES.some((t) => t.id === cd.themeId)) setThemeId(cd.themeId);
-        if (BORDER_STYLES.includes(cd.borderStyle)) setBorder(cd.borderStyle);
-        if (FONT_STYLES.includes(cd.fontStyle)) setFont(cd.fontStyle);
-        if (CARD_BACKGROUND_MODES.includes(cd.backgroundMode)) setBackgroundMode(cd.backgroundMode);
-        if (typeof cd.gifUrl === 'string') setGifUrl(cd.gifUrl);
-        if (Array.isArray(cd.stickers)) setMyInterests(cd.stickers.slice(0, MAX_INTERESTS));
-      })
-      .catch(() => {})
-      .finally(() => setAutoSaveReady(true));
-  }, [MAX_INTERESTS]);
-
   // Load existing card design + current avatar
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
-    if (!token) return;
+    if (!token) {
+      setAutoSaveReady(true);
+      return;
+    }
     Promise.all([
       fetch('/api/users/me/card-design', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }).then((r) => r.json()),
       fetch('/api/users/me', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
@@ -730,7 +713,6 @@ function CardStylePanel() {
           ? JSON.stringify({ type: 'gradient', angle: gradientAngle, colors: gradientColors })
           : resolvedBackgroundUrl,
       };
-      console.log('[saveCardDesign] Sending payload:', payload);
       const res = await fetch('/api/users/me/card-design', {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -738,11 +720,9 @@ function CardStylePanel() {
       });
       if (!res.ok) throw new Error('Failed to save card style');
       const data = await res.json();
-      console.log('[saveCardDesign] Received response:', data);
       if (data.cardDesign) {
         const saved = data.cardDesign;
-        console.log('[saveCardDesign] Updating state with:', saved);
-        setTheme(saved.themeId);
+        setThemeId(saved.themeId);
         setBorder(saved.borderStyle);
         setFont(saved.fontStyle);
         setBackgroundMode(saved.backgroundMode);
@@ -755,8 +735,8 @@ function CardStylePanel() {
               setGradientAngle(grad.angle || 135);
               setGradientColors(grad.colors || ['#7c3aed', '#ec4899']);
             }
-          } catch (e) {
-            console.error('[saveCardDesign] Failed to parse gradient:', e);
+          } catch {
+            // ignore malformed gradient payloads
           }
         }
       }
@@ -765,8 +745,8 @@ function CardStylePanel() {
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
       }
-    } catch (err) {
-      console.error('[saveCardDesign] Error:', err);
+    } catch {
+      // no-op
     } finally {
       setSaving(false);
     }
@@ -1302,7 +1282,7 @@ function LivePreview({ name }: { name: string }) {
             themeId={cardDesign?.themeId ?? 'rose'}
             borderStyle={cardDesign?.borderStyle ?? 'glass'}
             fontStyle={cardDesign?.fontStyle ?? 'modern'}
-            backgroundMode={cardDesign?.backgroundMode === 'gif' || cardDesign?.backgroundMode === 'image' ? cardDesign.backgroundMode : 'theme'}
+            backgroundMode={cardDesign?.backgroundMode ?? 'theme'}
             gifUrl={cardDesign?.gifUrl}
                         innerGradient={cardDesign?.backgroundMode === 'gradient' ? parseGradientCss(cardDesign.gifUrl) : undefined}
             bannerUrl=""

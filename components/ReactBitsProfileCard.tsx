@@ -27,7 +27,7 @@ export interface ReactBitsProfileCardProps {
   themeId?: string;
   borderStyle?: 'glass' | 'neon' | 'minimal';
   fontStyle?: 'modern' | 'mono' | 'playful';
-  backgroundMode?: 'theme' | 'gif' | 'image';
+  backgroundMode?: 'theme' | 'gif' | 'image' | 'gradient';
   gifUrl?: string;
   className?: string;
   enableTilt?: boolean;

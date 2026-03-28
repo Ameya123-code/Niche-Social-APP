@@ -33,8 +33,21 @@ type CardDesign = {
   stickers?: string[];
   borderStyle?: 'glass' | 'neon' | 'minimal';
   fontStyle?: 'modern' | 'mono' | 'playful';
-  backgroundMode?: 'theme' | 'gif' | 'image';
+  backgroundMode?: 'theme' | 'gif' | 'image' | 'gradient';
   gifUrl?: string;
+};
+
+const parseGradientCss = (raw?: string): string | undefined => {
+  if (!raw) return undefined;
+  try {
+    const g = JSON.parse(raw) as { type?: string; angle?: number; colors?: string[] };
+    if (g?.type === 'gradient' && Array.isArray(g.colors) && g.colors.length >= 2) {
+      return `linear-gradient(${g.angle ?? 135}deg, ${g.colors.join(', ')})`;
+    }
+  } catch {
+    // ignore non-JSON values
+  }
+  return undefined;
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -384,8 +397,9 @@ export default function ProfilePage() {
                   themeId={cardDesign?.themeId ?? 'rose'}
                   borderStyle={cardDesign?.borderStyle ?? 'glass'}
                   fontStyle={cardDesign?.fontStyle ?? 'modern'}
-                  backgroundMode={cardDesign?.backgroundMode === 'gif' || cardDesign?.backgroundMode === 'image' ? cardDesign.backgroundMode : 'theme'}
-                  gifUrl={cardDesign?.gifUrl}
+                  backgroundMode={cardDesign?.backgroundMode ?? 'theme'}
+                  gifUrl={cardDesign?.backgroundMode === 'gif' || cardDesign?.backgroundMode === 'image' ? cardDesign?.gifUrl : undefined}
+                  innerGradient={cardDesign?.backgroundMode === 'gradient' ? parseGradientCss(cardDesign?.gifUrl) : undefined}
                   enableTilt={true}
                   showUserInfo={true}
                   contactText="Message"
