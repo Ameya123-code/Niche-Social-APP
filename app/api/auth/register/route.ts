@@ -99,40 +99,30 @@ export async function POST(request: Request) {
 
     const token = generateToken({ userId: user.id, email: user.email, isEmailVerified: user.isEmailVerified });
 
-    let emailVerificationSent = true;
+    const verificationCode = generateSixDigitCode();
+    await prisma.verificationToken.create({
+      data: {
+        userId: user.id,
+        type: VERIFICATION_TYPES.EMAIL_VERIFY,
+        code: verificationCode,
+        expiresAt: getExpiryDate(15),
+      },
+    });
+
+    const emailConfigured = isEmailProviderConfigured();
+    let emailVerificationSent = emailConfigured;
     let devVerificationCode: string | null = null;
     try {
-      if (!isEmailProviderConfigured()) {
-        emailVerificationSent = false;
-      }
-
-      if (!emailVerificationSent) {
-        return NextResponse.json(
-          {
-            message: 'Account created successfully. Verification email could not be sent right now.',
-            token,
-            user,
-            emailVerificationSent,
-          },
-          { status: 201 }
-        );
-      }
-
-      const verificationCode = generateSixDigitCode();
-      await prisma.verificationToken.create({
-        data: {
-          userId: user.id,
-          type: VERIFICATION_TYPES.EMAIL_VERIFY,
-          code: verificationCode,
-          expiresAt: getExpiryDate(15),
-        },
-      });
-      await sendEmailVerificationCode(user.email, verificationCode);
-      if (process.env.NODE_ENV !== 'production') {
+      if (emailConfigured) {
+        await sendEmailVerificationCode(user.email, verificationCode);
+      } else if (process.env.NODE_ENV !== 'production') {
         devVerificationCode = verificationCode;
       }
     } catch {
       emailVerificationSent = false;
+      if (process.env.NODE_ENV !== 'production') {
+        devVerificationCode = verificationCode;
+      }
     }
 
     return NextResponse.json(

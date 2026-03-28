@@ -7,17 +7,7 @@ import { isEmailProviderConfigured, sendEmailVerificationCode } from '@/lib/emai
 // POST /api/auth/verification/email/send
 export async function POST(request: NextRequest) {
   try {
-    if (!isEmailProviderConfigured()) {
-      return NextResponse.json(
-        {
-          error:
-            process.env.NODE_ENV === 'production'
-              ? 'Email service is temporarily unavailable. Please try again later.'
-              : 'Email provider is not configured. Set RESEND_API_KEY and EMAIL_FROM.',
-        },
-        { status: 503 }
-      );
-    }
+    const emailConfigured = isEmailProviderConfigured();
 
     const authUser = getUserFromRequest(request);
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -36,9 +26,25 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    await sendEmailVerificationCode(user.email, code);
+    if (emailConfigured) {
+      await sendEmailVerificationCode(user.email, code);
+      return NextResponse.json({ message: 'Verification code sent to email' }, { status: 200 });
+    }
 
-    return NextResponse.json({ message: 'Verification code sent to email' }, { status: 200 });
+    if (process.env.NODE_ENV !== 'production') {
+      return NextResponse.json(
+        {
+          message: 'Email provider not configured. Using dev verification code fallback.',
+          devVerificationCode: code,
+        },
+        { status: 200 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Email service is temporarily unavailable. Please try again later.' },
+      { status: 503 }
+    );
   } catch (error) {
     console.error('Email verification send error:', error);
     return NextResponse.json({ error: 'Failed to send verification code' }, { status: 500 });
