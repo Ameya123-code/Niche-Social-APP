@@ -6,6 +6,8 @@ import Pusher from 'pusher-js';
 import { ArrowLeft, Send, Zap, Image as ImageIcon, Video, Phone, Smile, PhoneCall, VideoIcon } from 'lucide-react';
 import { DEMO_CONVERSATIONS, DEMO_MESSAGES } from '@/lib/demo-chat';
 
+const EMOJI_OPTIONS = ['😀', '😂', '😍', '🥹', '🔥', '✨', '💯', '🙌', '🤝', '🎉', '😎', '🤍'];
+
 type Partner = { id: string; name: string; age: number; city?: string; profileImageUrl?: string | null };
 type Conversation = {
   id: string;
@@ -35,11 +37,10 @@ export default function ChatDetailPage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [myId, setMyId] = useState('');
   const [text, setText] = useState('');
-  const [gifUrl, setGifUrl] = useState('');
-  const [videoUrl, setVideoUrl] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [sending, setSending] = useState(false);
   const [xpHint, setXpHint] = useState('');
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
   const [callHint, setCallHint] = useState('');
   const [placingCall, setPlacingCall] = useState(false);
 
@@ -234,26 +235,35 @@ export default function ChatDetailPage() {
     }
   };
 
-  const uploadAndSendImage = async (file: File) => {
-    if (!canImage) return;
+  const uploadAndSendMedia = async (file: File, type: 'image' | 'gif' | 'video') => {
+    if (type === 'image' && !canImage) return;
+    if (type === 'gif' && !canGif) return;
+    if (type === 'video' && !canVideo) return;
+
+    if (isDemo) {
+      setXpHint('media upload unavailable in demo chat');
+      setTimeout(() => setXpHint(''), 2200);
+      return;
+    }
+
     const token = localStorage.getItem('auth_token');
     if (!token) return;
 
-    setUploadingImage(true);
+    setUploadingMedia(true);
     try {
       const form = new FormData();
       form.append('file', file);
-      const upRes = await fetch('/api/uploads/image', {
+      const upRes = await fetch('/api/uploads/media', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: form,
       });
       const up = await upRes.json().catch(() => ({}));
       if (upRes.ok && up?.url) {
-        await sendTypedMessage('image', up.url);
+        await sendTypedMessage(type, up.url);
       }
     } finally {
-      setUploadingImage(false);
+      setUploadingMedia(false);
     }
   };
 
@@ -377,7 +387,7 @@ export default function ChatDetailPage() {
           <button
             type="button"
             disabled={!canEmoji || sending}
-            onClick={() => sendTypedMessage('emoji', '🔥')}
+            onClick={() => setShowEmojiPicker((v) => !v)}
             className="h-8 px-2.5 rounded-lg border border-gray-300 dark:border-gray-700 text-xs disabled:opacity-40 inline-flex items-center gap-1"
           >
             <Smile className="w-3.5 h-3.5" /> Emoji
@@ -387,14 +397,44 @@ export default function ChatDetailPage() {
             <ImageIcon className="w-3.5 h-3.5" />
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              disabled={!canImage || uploadingImage || sending}
+              accept="image/jpeg,image/png,image/webp"
+              disabled={!canImage || uploadingMedia || sending}
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) uploadAndSendImage(file);
+                if (file) uploadAndSendMedia(file, 'image');
                 e.currentTarget.value = '';
               }}
               className="text-[10px] w-[120px]"
+            />
+          </div>
+
+          <div className="h-8 px-2.5 rounded-lg border border-gray-300 dark:border-gray-700 text-xs inline-flex items-center gap-1">
+            <ImageIcon className="w-3.5 h-3.5" />
+            <input
+              type="file"
+              accept="image/gif"
+              disabled={!canGif || uploadingMedia || sending}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadAndSendMedia(file, 'gif');
+                e.currentTarget.value = '';
+              }}
+              className="text-[10px] w-[100px]"
+            />
+          </div>
+
+          <div className="h-8 px-2.5 rounded-lg border border-gray-300 dark:border-gray-700 text-xs inline-flex items-center gap-1">
+            <Video className="w-3.5 h-3.5" />
+            <input
+              type="file"
+              accept="video/mp4,video/webm,video/quicktime"
+              disabled={!canVideo || uploadingMedia || sending}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadAndSendMedia(file, 'video');
+                e.currentTarget.value = '';
+              }}
+              className="text-[10px] w-[100px]"
             />
           </div>
 
@@ -408,49 +448,23 @@ export default function ChatDetailPage() {
           </button>
         </div>
 
-        <div className="mb-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div className="flex gap-1.5">
-            <input
-              value={gifUrl}
-              onChange={(e) => setGifUrl(e.target.value)}
-              placeholder={canGif ? 'GIF URL' : 'GIF unlocks at LVL 5'}
-              disabled={!canGif || sending}
-              className="flex-1 h-9 rounded-lg border border-gray-300 dark:border-gray-700 px-2.5 text-xs bg-white dark:bg-zinc-900 disabled:opacity-40"
-            />
-            <button
-              type="button"
-              disabled={!canGif || !gifUrl.trim() || sending}
-              onClick={async () => {
-                await sendTypedMessage('gif', gifUrl.trim());
-                setGifUrl('');
-              }}
-              className="h-9 px-3 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs disabled:opacity-40"
-            >
-              Send GIF
-            </button>
+        {showEmojiPicker && canEmoji ? (
+          <div className="mb-2 p-2 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-zinc-900 grid grid-cols-6 gap-1.5">
+            {EMOJI_OPTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => {
+                  void sendTypedMessage('emoji', emoji);
+                  setShowEmojiPicker(false);
+                }}
+                className="h-9 rounded-md hover:bg-black/5 dark:hover:bg-white/10 text-xl"
+              >
+                {emoji}
+              </button>
+            ))}
           </div>
-
-          <div className="flex gap-1.5">
-            <input
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
-              placeholder={canVideo ? 'Video URL' : 'Video unlocks at LVL 15'}
-              disabled={!canVideo || sending}
-              className="flex-1 h-9 rounded-lg border border-gray-300 dark:border-gray-700 px-2.5 text-xs bg-white dark:bg-zinc-900 disabled:opacity-40"
-            />
-            <button
-              type="button"
-              disabled={!canVideo || !videoUrl.trim() || sending}
-              onClick={async () => {
-                await sendTypedMessage('video', videoUrl.trim());
-                setVideoUrl('');
-              }}
-              className="h-9 px-3 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-black text-xs disabled:opacity-40 inline-flex items-center gap-1"
-            >
-              <Video className="w-3.5 h-3.5" /> Send
-            </button>
-          </div>
-        </div>
+        ) : null}
 
         <div className="flex items-center gap-2">
           <input
