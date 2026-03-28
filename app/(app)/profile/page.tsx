@@ -229,10 +229,13 @@ export default function ProfilePage() {
               user?: AuthUser & { selfDescription?: string | null; profileImageUrl?: string | null };
             };
             if (userData.user) {
-              setAuthUser((prev) => prev ? {
-                ...prev,
-                ...userData.user,
-              } : userData.user);
+              setAuthUser((prev) => {
+                if (!prev) return userData.user as AuthUser;
+                return {
+                  ...prev,
+                  ...userData.user,
+                } as AuthUser;
+              });
             }
           }
         }
