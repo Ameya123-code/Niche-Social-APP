@@ -721,12 +721,7 @@ export default function CardsPage() {
 
               {backgroundMode === 'gif' && (
                 <div className="space-y-2">
-                  <input
-                    value={gifUrl}
-                    onChange={(e) => setGifUrl(e.target.value)}
-                    placeholder="Paste GIF or image URL"
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
-                  />
+                  <p className="text-[11px] text-gray-500">Choose a GIF background</p>
                   <div className="flex flex-wrap gap-2">
                     {QUICK_GIFS.map((gif) => (
                       <button

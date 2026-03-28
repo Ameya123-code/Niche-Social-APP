@@ -16,6 +16,8 @@ type Conversation = {
   lastMessageAt?: string;
 };
 
+const maskUrls = (value: string) => value.replace(/(https?:\/\/\S+|www\.\S+)/gi, '[link hidden]');
+
 const levelTag = (level: number) =>
   level >= 40 ? 'Event suggestions unlocked' : level >= 25 ? 'Video call unlocked' : level >= 20 ? 'Voice call unlocked' : level >= 15 ? 'Video unlocked' : level >= 10 ? 'Images unlocked' : level >= 5 ? 'GIF/emoji unlocked' : 'Text only';
 
@@ -108,7 +110,7 @@ export default function ChatListPage() {
                       </div>
                     </div>
                     <p className="text-xs text-gray-500 truncate mt-0.5">
-                      {conv.lastMessage?.content || 'Start your conversation'}
+                      {conv.lastMessage?.content ? maskUrls(conv.lastMessage.content) : 'Start your conversation'}
                     </p>
 
                     <div className="mt-2 flex items-center justify-between">

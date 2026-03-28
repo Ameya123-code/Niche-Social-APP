@@ -270,12 +270,7 @@ function AvatarPanel({ token }: { token: string }) {
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               {uploading ? 'Uploading…' : 'Upload image or GIF'}
             </button>
-            <input
-              value={global.avatar}
-              onChange={(e) => updateGlobal({ avatar: e.target.value })}
-              placeholder="Or paste URL"
-              className={inputCls}
-            />
+            <p className="text-[11px] text-gray-500">Upload to update your avatar</p>
           </div>
         </div>
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
@@ -390,12 +385,7 @@ function BannerPanel({ token }: { token: string }) {
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               {uploading ? 'Uploading…' : 'Upload background'}
             </button>
-            <input
-              value={backgroundUrl}
-              onChange={(e) => setBackgroundUrl(e.target.value)}
-              placeholder="Or paste image / GIF URL"
-              className={inputCls}
-            />
+            <p className="text-[11px] text-gray-500">Upload an image or GIF for background</p>
           </div>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
         </div>

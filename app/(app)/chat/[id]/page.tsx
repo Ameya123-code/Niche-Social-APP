@@ -3,10 +3,9 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Pusher from 'pusher-js';
+import EmojiPicker from 'emoji-picker-react';
 import { ArrowLeft, Send, Zap, Image as ImageIcon, Video, Phone, Smile, PhoneCall, VideoIcon } from 'lucide-react';
 import { DEMO_CONVERSATIONS, DEMO_MESSAGES } from '@/lib/demo-chat';
-
-const EMOJI_OPTIONS = ['😀', '😂', '😍', '🥹', '🔥', '✨', '💯', '🙌', '🤝', '🎉', '😎', '🤍'];
 
 type Partner = { id: string; name: string; age: number; city?: string; profileImageUrl?: string | null };
 type Conversation = {
@@ -26,6 +25,13 @@ type Msg = {
   createdAt: string;
   sender?: { id: string; name: string };
 };
+
+const isMediaUrl = (value: string) => {
+  const v = value.trim();
+  return v.startsWith('/api/uploads/media/') || v.startsWith('/api/uploads/image/') || /^https?:\/\//i.test(v);
+};
+
+const maskUrls = (value: string) => value.replace(/(https?:\/\/\S+|www\.\S+)/gi, '[link hidden]');
 
 export default function ChatDetailPage() {
   const router = useRouter();
@@ -353,20 +359,15 @@ export default function ChatDetailPage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={m.content} alt="sent gif" className="max-h-64 rounded-lg" />
                 ) : m.type === 'video' ? (
-                  <a
-                    href={m.content}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`underline ${mine ? 'text-rose-100' : 'text-blue-600 dark:text-blue-400'}`}
-                  >
-                    🎬 Open video
-                  </a>
+                  <video src={m.content} controls className="max-h-64 rounded-lg" />
                 ) : m.type === 'voice_note' ? (
                   <p>📞 Voice call request sent</p>
                 ) : m.type === 'emoji' ? (
                   <p className="text-2xl leading-none">{m.content}</p>
+                ) : m.type === 'text' && isMediaUrl(m.content) ? (
+                  <p>📎 Media attachment</p>
                 ) : (
-                  <p>{m.content}</p>
+                  <p>{maskUrls(m.content)}</p>
                 )}
                 <p className={`text-[10px] mt-1 ${mine ? 'text-rose-100' : 'text-gray-500'}`}>
                   {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -449,20 +450,16 @@ export default function ChatDetailPage() {
         </div>
 
         {showEmojiPicker && canEmoji ? (
-          <div className="mb-2 p-2 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-zinc-900 grid grid-cols-6 gap-1.5">
-            {EMOJI_OPTIONS.map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                onClick={() => {
-                  void sendTypedMessage('emoji', emoji);
-                  setShowEmojiPicker(false);
-                }}
-                className="h-9 rounded-md hover:bg-black/5 dark:hover:bg-white/10 text-xl"
-              >
-                {emoji}
-              </button>
-            ))}
+          <div className="mb-2 p-2 rounded-lg border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-zinc-900 overflow-hidden">
+            <EmojiPicker
+              width="100%"
+              height={320}
+              onEmojiClick={(emojiData) => {
+                void sendTypedMessage('emoji', emojiData.emoji);
+                setShowEmojiPicker(false);
+              }}
+              previewConfig={{ showPreview: false }}
+            />
           </div>
         ) : null}
 

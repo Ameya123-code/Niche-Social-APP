@@ -157,19 +157,7 @@ export default function CreateEventPage() {
             />
           </div>
 
-          {/* Image URL */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-              <span className="flex items-center gap-1.5"><Image className="w-4 h-4" /> Cover Image URL (optional)</span>
-            </label>
-            <input
-              name="imageUrl"
-              value={form.imageUrl}
-              onChange={handleChange}
-              placeholder="https://..."
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-            />
-          </div>
+          {/* Cover image upload is handled in media flows; URL field intentionally hidden */}
 
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-600 text-sm">
