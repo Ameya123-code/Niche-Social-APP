@@ -6,7 +6,7 @@ export type UserCardDesign = {
   stickers: string[];
   borderStyle: 'glass' | 'neon' | 'minimal';
   fontStyle: 'modern' | 'mono' | 'playful';
-  backgroundMode: 'theme' | 'gif' | 'image';
+  backgroundMode: 'theme' | 'gif' | 'image' | 'gradient';
   gifUrl?: string;
   updatedAt: string;
 };
@@ -55,7 +55,7 @@ const normalizeFontStyle = (style?: string): UserCardDesign['fontStyle'] => {
 };
 
 const normalizeBackgroundMode = (mode?: string): UserCardDesign['backgroundMode'] => {
-  return mode === 'gif' || mode === 'theme' || mode === 'image' ? mode : 'theme';
+  return mode === 'gif' || mode === 'theme' || mode === 'image' || mode === 'gradient' ? mode : 'theme';
 };
 
 const normalizeGifUrl = (url?: unknown): string | undefined => {
@@ -147,6 +147,18 @@ export async function setUserCardDesign(
 
   if (updated.backgroundMode === 'theme') {
     updated.gifUrl = undefined;
+  } else if (updated.backgroundMode === 'gradient') {
+    // For gradient mode, gifUrl must be JSON. If the input is not provided or invalid, use the current gifUrl if it's valid JSON
+    if (input.gifUrl && input.gifUrl.startsWith('{')) {
+      // New gradient JSON provided - use it
+      // gifUrl is already set from input above
+    } else if (updated.gifUrl && updated.gifUrl.startsWith('{')) {
+      // Current gifUrl is valid JSON, keep it
+      // no change needed
+    } else {
+      // Invalid or missing gradient data - wipe it
+      updated.gifUrl = undefined;
+    }
   }
 
   const row = await prisma.userCardDesign.upsert({

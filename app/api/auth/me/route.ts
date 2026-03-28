@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
         phone: true,
         name: true,
         age: true,
+        isEmailVerified: true,
+        isPhoneVerified: true,
         isAgeVerified: true,
         selfDescription: true,
         profileImageUrl: true,

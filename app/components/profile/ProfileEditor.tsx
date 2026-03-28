@@ -13,6 +13,9 @@ import {
   Upload,
   Check,
   Loader2,
+  Camera,
+  Plus,
+  Minus,
 } from 'lucide-react';
 import { useProfileStore } from '@/store/profile';
 import { useThemeStore, THEME_PALETTES } from '@/store/theme';
@@ -40,6 +43,13 @@ const CARD_THEMES = [
 ];
 const BORDER_STYLES = ['glass', 'neon', 'minimal'] as const;
 const FONT_STYLES   = ['modern', 'mono', 'playful'] as const;
+const CARD_BACKGROUND_MODES = ['theme', 'gradient', 'gif', 'image'] as const;
+const CARD_GIF_PRESETS = [
+  'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjltdzB3YmliN3Q5MHV2MDEwaTZwd2o0NXNyZDQ0NnZjY2s4Y2R0bSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/3o7aD2saalBwwftBIY/giphy.gif',
+  'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExM2xwN2x3NnA4NG5sY2s2MWh4aDJwa3FhdzN0N3pkYXFhM2JveHFwYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/l0HlNaQ6gWfllcjDO/giphy.gif',
+  'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExb3Ezc2FwM2Y4bzQwM2M0NmQzNXVxN2N2M3o0N3I5cTZmbDVkY2h5YiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/26ufdipQqU2lhNA4g/giphy.gif',
+  'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcTFqMXQ4MDFkY2R1N3duYmllcDNnbzA4a3FpeHV2MHl0dDJ5aW5mYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/xT0xeJpnrWC4XWblEk/giphy.gif',
+];
 
 type InterestOption = {
   id: string;
@@ -184,6 +194,18 @@ function useDebounce<T>(value: T, ms: number): T {
   }, [value, ms]);
   return debounced;
 }
+
+/** Decode gradient JSON stored in gifUrl for mode='gradient' */
+const parseGradientCss = (raw?: string): string | undefined => {
+  if (!raw) return undefined;
+  try {
+    const g = JSON.parse(raw) as { type?: string; angle?: number; colors?: string[] };
+    if (g?.type === 'gradient' && Array.isArray(g.colors) && g.colors.length >= 2) {
+      return `linear-gradient(${g.angle ?? 135}deg, ${g.colors.join(', ')})`;
+    }
+  } catch { /* not JSON */ }
+  return undefined;
+};
 
 // ─── Tab Config ──────────────────────────────────────────────────────────────
 
@@ -561,6 +583,9 @@ function CardStylePanel() {
   const [themeId, setThemeId] = useState('rose');
   const [border, setBorder] = useState<typeof BORDER_STYLES[number]>('glass');
   const [font, setFont] = useState<typeof FONT_STYLES[number]>('modern');
+  const [backgroundMode, setBackgroundMode] = useState<typeof CARD_BACKGROUND_MODES[number]>('theme');
+  const [gifUrl, setGifUrl] = useState('');
+  const [backgroundFile, setBackgroundFile] = useState<File | null>(null);
   const [myInterests, setMyInterests] = useState<string[]>([]);
   const [activeInterestSection, setActiveInterestSection] = useState<string>(INTEREST_SECTIONS[0]?.id ?? 'identity');
   const [interestInput, setInterestInput] = useState('');
@@ -569,6 +594,14 @@ function CardStylePanel() {
   const [saved, setSaved] = useState(false);
   const [autoSaveReady, setAutoSaveReady] = useState(false);
   const MAX_INTERESTS = 30;
+  const [gradientColors, setGradientColors] = useState<string[]>(['#7c3aed', '#ec4899']);
+  const [gradientAngle, setGradientAngle] = useState(135);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingBackground, setIsUploadingBackground] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const backgroundInputRef = useRef<HTMLInputElement>(null);
 
   // Load existing card design
   useEffect(() => {
@@ -582,28 +615,158 @@ function CardStylePanel() {
         if (CARD_THEMES.some((t) => t.id === cd.themeId)) setThemeId(cd.themeId);
         if (BORDER_STYLES.includes(cd.borderStyle)) setBorder(cd.borderStyle);
         if (FONT_STYLES.includes(cd.fontStyle)) setFont(cd.fontStyle);
+        if (CARD_BACKGROUND_MODES.includes(cd.backgroundMode)) setBackgroundMode(cd.backgroundMode);
+        if (typeof cd.gifUrl === 'string') setGifUrl(cd.gifUrl);
         if (Array.isArray(cd.stickers)) setMyInterests(cd.stickers.slice(0, MAX_INTERESTS));
       })
       .catch(() => {})
       .finally(() => setAutoSaveReady(true));
   }, [MAX_INTERESTS]);
 
+  // Load existing card design + current avatar
+  useEffect(() => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    Promise.all([
+      fetch('/api/users/me/card-design', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }).then((r) => r.json()),
+      fetch('/api/users/me', { headers: { Authorization: `Bearer ${token}` } }).then((r) => r.json()),
+    ])
+      .then(([designData, meData]) => {
+        const cd = (designData as { cardDesign?: Record<string, unknown> })?.cardDesign;
+        if (cd) {
+          if (CARD_THEMES.some((t) => t.id === cd.themeId)) setThemeId(cd.themeId as string);
+          if (BORDER_STYLES.includes(cd.borderStyle as typeof BORDER_STYLES[number])) setBorder(cd.borderStyle as typeof BORDER_STYLES[number]);
+          if (FONT_STYLES.includes(cd.fontStyle as typeof FONT_STYLES[number])) setFont(cd.fontStyle as typeof FONT_STYLES[number]);
+          if (CARD_BACKGROUND_MODES.includes(cd.backgroundMode as typeof CARD_BACKGROUND_MODES[number])) setBackgroundMode(cd.backgroundMode as typeof CARD_BACKGROUND_MODES[number]);
+          if (typeof cd.gifUrl === 'string') {
+            if (cd.backgroundMode === 'gradient') {
+              try {
+                const g = JSON.parse(cd.gifUrl as string) as { type?: string; colors?: string[]; angle?: number };
+                if (g?.type === 'gradient' && Array.isArray(g.colors) && g.colors.length >= 2) {
+                  setGradientColors(g.colors.slice(0, 5));
+                  if (typeof g.angle === 'number') setGradientAngle(Math.max(0, Math.min(360, g.angle)));
+                }
+              } catch { /* ignore */ }
+            } else {
+              setGifUrl(cd.gifUrl as string);
+            }
+          }
+          if (Array.isArray(cd.stickers)) setMyInterests((cd.stickers as string[]).slice(0, MAX_INTERESTS));
+        }
+        const profileImageUrl = (meData as { user?: { profileImageUrl?: string | null } })?.user?.profileImageUrl;
+        if (profileImageUrl) setAvatarPreviewUrl(profileImageUrl);
+      })
+      .catch(() => {})
+      .finally(() => setAutoSaveReady(true));
+  }, [MAX_INTERESTS]);
+
+  const uploadAvatar = async (): Promise<void> => {
+    if (!avatarFile) return;
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    setIsUploadingAvatar(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', avatarFile);
+      const res = await fetch('/api/uploads/image', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      if (!res.ok) return;
+      const { url } = await res.json() as { url?: string };
+      if (!url) return;
+      await fetch('/api/users/me', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileImageUrl: url }),
+      });
+      setAvatarPreviewUrl(url);
+      setAvatarFile(null);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const uploadBackground = async (): Promise<string> => {
+    if (!backgroundFile || (backgroundMode !== 'gif' && backgroundMode !== 'image')) return gifUrl;
+    const token = localStorage.getItem('auth_token');
+    if (!token) return gifUrl;
+    setIsUploadingBackground(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', backgroundFile);
+      const res = await fetch('/api/uploads/image', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      if (!res.ok) return gifUrl;
+      const { url } = await res.json() as { url?: string };
+      if (!url) return gifUrl;
+      setGifUrl(url);
+      setBackgroundFile(null);
+      return url;
+    } finally {
+      setIsUploadingBackground(false);
+    }
+  };
+
   const saveCardDesign = async (silent = false) => {
     const token = localStorage.getItem('auth_token');
     if (!token) return;
     setSaving(true);
     try {
+      await uploadAvatar();
+      const resolvedBackgroundUrl = await uploadBackground();
+      const payload = {
+        isCustomized: true,
+        themeId,
+        stickers: myInterests,
+        borderStyle: border,
+        fontStyle: font,
+        backgroundMode,
+        gifUrl: backgroundMode === 'gradient'
+          ? JSON.stringify({ type: 'gradient', angle: gradientAngle, colors: gradientColors })
+          : resolvedBackgroundUrl,
+      };
+      console.log('[saveCardDesign] Sending payload:', payload);
       const res = await fetch('/api/users/me/card-design', {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isCustomized: true, themeId, stickers: myInterests, borderStyle: border, fontStyle: font }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Failed to save card style');
+      const data = await res.json();
+      console.log('[saveCardDesign] Received response:', data);
+      if (data.cardDesign) {
+        const saved = data.cardDesign;
+        console.log('[saveCardDesign] Updating state with:', saved);
+        setTheme(saved.themeId);
+        setBorder(saved.borderStyle);
+        setFont(saved.fontStyle);
+        setBackgroundMode(saved.backgroundMode);
+        setGifUrl(saved.gifUrl || '');
+        setMyInterests(saved.stickers || []);
+        if (saved.backgroundMode === 'gradient' && saved.gifUrl) {
+          try {
+            const grad = JSON.parse(saved.gifUrl);
+            if (grad.type === 'gradient') {
+              setGradientAngle(grad.angle || 135);
+              setGradientColors(grad.colors || ['#7c3aed', '#ec4899']);
+            }
+          } catch (e) {
+            console.error('[saveCardDesign] Failed to parse gradient:', e);
+          }
+        }
+      }
       window.dispatchEvent(new Event('card-design-updated'));
       if (!silent) {
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
       }
+    } catch (err) {
+      console.error('[saveCardDesign] Error:', err);
     } finally {
       setSaving(false);
     }
@@ -613,10 +776,20 @@ function CardStylePanel() {
     if (!autoSaveReady) return;
     const t = setTimeout(() => {
       saveCardDesign(true).catch(() => {});
-    }, 700);
+    }, 800);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [themeId, border, font, myInterests, autoSaveReady]);
+  }, [
+    themeId,
+    border,
+    font,
+    backgroundMode,
+    gifUrl,
+    JSON.stringify(gradientColors),
+    gradientAngle,
+    JSON.stringify(myInterests),
+    autoSaveReady,
+  ]);
 
   const activeSection = INTEREST_SECTIONS.find((section) => section.id === activeInterestSection) ?? INTEREST_SECTIONS[0];
   const interestEmojiMap = INTEREST_SECTIONS
@@ -657,17 +830,69 @@ function CardStylePanel() {
       <p className="text-xs text-gray-500">Controls the appearance of your profile card.</p>
 
       <div>
-        <span className={labelCls}>Card Theme</span>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {CARD_THEMES.map((t) => (
-            <button key={t.id} onClick={() => setThemeId(t.id)}
-              className={`py-2 px-3 rounded-xl border text-xs transition text-left ${themeId === t.id ? activeBtn : inactiveBtn}`}>
-              <span className="block w-full h-1.5 rounded-full mb-1.5" style={{ background: t.gradient }} />
-              {t.name}
+        <span className={labelCls}>Avatar photo</span>
+        <div className="flex items-center gap-3">
+          <div className="relative flex-shrink-0">
+            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              {avatarPreviewUrl ? (
+                <img src={avatarPreviewUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <Camera className="w-5 h-5 text-gray-400" />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center shadow"
+              style={{ background: 'var(--primary)' }}
+            >
+              <Plus className="w-2.5 h-2.5 text-white" />
             </button>
-          ))}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-gray-600 dark:text-gray-400 leading-snug">
+              {avatarFile ? `Ready to upload: ${avatarFile.name}` : avatarPreviewUrl ? 'Looking good! Tap to change.' : 'Add a photo to your card.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={isUploadingAvatar}
+              className="mt-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-[var(--primary)] hover:text-[var(--primary)] transition disabled:opacity-50"
+            >
+              {isUploadingAvatar ? 'Uploading…' : 'Choose photo'}
+            </button>
+          </div>
         </div>
+        <input
+          ref={avatarInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setAvatarFile(file);
+            const prev = avatarPreviewUrl;
+            if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+            setAvatarPreviewUrl(URL.createObjectURL(file));
+          }}
+        />
       </div>
+
+      {backgroundMode === 'theme' && (
+        <div>
+          <span className={labelCls}>Card Theme</span>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {CARD_THEMES.map((t) => (
+              <button key={t.id} onClick={() => setThemeId(t.id)}
+                className={`py-2 px-3 rounded-xl border text-xs transition text-left ${themeId === t.id ? activeBtn : inactiveBtn}`}>
+                <span className="block w-full h-1.5 rounded-full mb-1.5" style={{ background: t.gradient }} />
+                {t.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -692,6 +917,167 @@ function CardStylePanel() {
             ))}
           </div>
         </div>
+      </div>
+
+      <div>
+        <span className={labelCls}>Background</span>
+        <div className="flex gap-1.5 flex-wrap mb-3">
+          {(['theme', 'gradient', 'gif', 'image'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setBackgroundMode(mode)}
+              className={`py-2 px-3 rounded-xl border text-xs transition ${backgroundMode === mode ? activeBtn : inactiveBtn}`}
+            >
+              {mode === 'theme' ? '🎨 Theme' : mode === 'gradient' ? '🌈 Gradient' : mode === 'gif' ? '📽️ GIF' : '🖼️ Image'}
+            </button>
+          ))}
+        </div>
+
+        {(backgroundMode === 'gif' || backgroundMode === 'image') && (
+          <div className="mb-3 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="relative w-20 h-14 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                {gifUrl ? (
+                  <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${gifUrl})` }} />
+                ) : (
+                  <ImageIcon className="w-5 h-5 text-gray-400" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-600 dark:text-gray-400 leading-snug">
+                  {backgroundFile
+                    ? `Ready to upload: ${backgroundFile.name}`
+                    : gifUrl
+                      ? `Using ${backgroundMode === 'gif' ? 'animated' : 'image'} background.`
+                      : `Choose a ${backgroundMode === 'gif' ? 'GIF' : 'background image'} for your card.`}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => backgroundInputRef.current?.click()}
+                  disabled={isUploadingBackground}
+                  className="mt-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-[var(--primary)] hover:text-[var(--primary)] transition disabled:opacity-50 inline-flex items-center gap-1.5"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  {isUploadingBackground ? 'Uploading…' : `Choose ${backgroundMode === 'gif' ? 'GIF' : 'image'}`}
+                </button>
+              </div>
+            </div>
+
+            <input
+              ref={backgroundInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setBackgroundFile(file);
+                setBackgroundMode(file.type === 'image/gif' ? 'gif' : 'image');
+                const prev = gifUrl;
+                if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+                setGifUrl(URL.createObjectURL(file));
+              }}
+            />
+          </div>
+        )}
+
+        {backgroundMode === 'gradient' && (
+          <div className="space-y-3">
+            <div className="space-y-2">
+              {gradientColors.map((color, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={color}
+                    onChange={(e) => {
+                      const next = [...gradientColors];
+                      next[i] = e.target.value;
+                      setGradientColors(next);
+                    }}
+                    className="w-9 h-9 rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700 p-0.5 bg-white dark:bg-gray-900"
+                  />
+                  <div className="flex-1 h-9 rounded-lg border border-gray-200 dark:border-gray-700" style={{ background: color }} />
+                  {gradientColors.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => setGradientColors(gradientColors.filter((_, idx) => idx !== i))}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {gradientColors.length < 5 && (
+                <button
+                  type="button"
+                  onClick={() => setGradientColors([...gradientColors, '#ffffff'])}
+                  className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[var(--primary)] transition"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add color stop
+                </button>
+              )}
+            </div>
+
+            <div>
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <span>Direction</span>
+                <span>{gradientAngle}°</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={360}
+                value={gradientAngle}
+                onChange={(e) => setGradientAngle(Number(e.target.value))}
+                className="w-full accent-[var(--primary)]"
+              />
+              <div className="flex gap-1.5 mt-1.5">
+                {([{ label: '→', val: 90 }, { label: '↘', val: 135 }, { label: '↓', val: 180 }, { label: '↗', val: 45 }] as const).map(({ label, val }) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setGradientAngle(val)}
+                    className={`w-8 h-8 rounded-lg text-xs border transition ${gradientAngle === val ? activeBtn : inactiveBtn}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div
+              className="h-10 rounded-xl shadow-inner"
+              style={{ background: `linear-gradient(${gradientAngle}deg, ${gradientColors.join(', ')})` }}
+            />
+          </div>
+        )}
+
+        {(backgroundMode === 'gif' || backgroundMode === 'image') && (
+          <div className="space-y-2">
+            <input
+              value={gifUrl}
+              onChange={(e) => setGifUrl(e.target.value)}
+              placeholder={backgroundMode === 'gif' ? 'Paste GIF URL' : 'Paste image URL'}
+              className={inputCls}
+            />
+            {backgroundMode === 'gif' && (
+              <div className="grid grid-cols-2 gap-2">
+                {CARD_GIF_PRESETS.map((gif) => (
+                  <button
+                    key={gif}
+                    type="button"
+                    onClick={() => setGifUrl(gif)}
+                    className={`h-16 rounded-xl border overflow-hidden transition ${gifUrl === gif ? 'border-[var(--primary)] ring-1 ring-[var(--primary)]/50' : 'border-gray-200 dark:border-gray-700 hover:border-gray-400'}`}
+                  >
+                    <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${gif})` }} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div>
@@ -782,11 +1168,11 @@ function CardStylePanel() {
         {interestNotice && <p className="mt-1 text-[11px] text-amber-500">{interestNotice}</p>}
       </div>
 
-      <button onClick={() => saveCardDesign()} disabled={saving}
+      <button onClick={() => saveCardDesign()} disabled={saving || isUploadingAvatar || isUploadingBackground}
         className="w-full py-3 rounded-2xl text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
         style={{ background: `linear-gradient(135deg, var(--primary), var(--accent))` }}>
-        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : null}
-        {saved ? 'Saved!' : saving ? 'Saving…' : 'Save Card Style'}
+        {saving || isUploadingAvatar || isUploadingBackground ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : null}
+        {saved ? 'Saved!' : saving || isUploadingAvatar || isUploadingBackground ? 'Saving…' : 'Save Card Style'}
       </button>
     </div>
   );
@@ -800,10 +1186,11 @@ function LivePreview({ name }: { name: string }) {
     themeId?: string;
     borderStyle?: 'glass' | 'neon' | 'minimal';
     fontStyle?: 'modern' | 'mono' | 'playful';
-    backgroundMode?: 'theme' | 'gif' | 'image';
+    backgroundMode?: 'theme' | 'gif' | 'image' | 'gradient';
     gifUrl?: string;
     stickers?: string[];
   } | null>(null);
+  const loadTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     const load = async () => {
@@ -820,7 +1207,7 @@ function LivePreview({ name }: { name: string }) {
             themeId?: string;
             borderStyle?: 'glass' | 'neon' | 'minimal';
             fontStyle?: 'modern' | 'mono' | 'playful';
-            backgroundMode?: 'theme' | 'gif' | 'image';
+            backgroundMode?: 'theme' | 'gif' | 'image' | 'gradient';
             gifUrl?: string;
             stickers?: string[];
           };
@@ -832,9 +1219,16 @@ function LivePreview({ name }: { name: string }) {
     };
 
     load();
-    const onUpdated = () => { load(); };
+    // Debounce reload on card-design-updated to avoid hammering the API
+    const onUpdated = () => {
+      if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
+      loadTimeoutRef.current = setTimeout(load, 500);
+    };
     window.addEventListener('card-design-updated', onUpdated);
-    return () => window.removeEventListener('card-design-updated', onUpdated);
+    return () => {
+      window.removeEventListener('card-design-updated', onUpdated);
+      if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
+    };
   }, []);
 
   const handle = name.toLowerCase().replace(/\s+/g, '') || 'you';
@@ -910,6 +1304,7 @@ function LivePreview({ name }: { name: string }) {
             fontStyle={cardDesign?.fontStyle ?? 'modern'}
             backgroundMode={cardDesign?.backgroundMode === 'gif' || cardDesign?.backgroundMode === 'image' ? cardDesign.backgroundMode : 'theme'}
             gifUrl={cardDesign?.gifUrl}
+                        innerGradient={cardDesign?.backgroundMode === 'gradient' ? parseGradientCss(cardDesign.gifUrl) : undefined}
             bannerUrl=""
             interests={Array.isArray(cardDesign?.stickers) && cardDesign.stickers.length
               ? cardDesign.stickers

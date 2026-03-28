@@ -81,3 +81,20 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
 }
+
+// DELETE /api/users/me — permanently delete account and related data
+export async function DELETE(request: NextRequest) {
+  try {
+    const authUser = getUserFromRequest(request);
+    if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    await prisma.user.delete({
+      where: { id: authUser.userId },
+    });
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error) {
+    console.error('DELETE /api/users/me error:', error);
+    return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 });
+  }
+}

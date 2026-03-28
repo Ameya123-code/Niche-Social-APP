@@ -7,6 +7,7 @@ import {
   Eye, EyeOff, ChevronLeft, Heart,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Silk from '@/components/Silk';
 
 /* ─────────────────────────────────────────────
    Floating-label input
@@ -86,11 +87,246 @@ type AuthFormState = {
   termsAccepted: boolean;
 };
 
+const COUNTRY_DIAL_CODES: Array<{ iso: string; name: string; dial: string }> = [
+  { iso: 'AF', name: 'Afghanistan', dial: '+93' },
+  { iso: 'AL', name: 'Albania', dial: '+355' },
+  { iso: 'DZ', name: 'Algeria', dial: '+213' },
+  { iso: 'AS', name: 'American Samoa', dial: '+1-684' },
+  { iso: 'AD', name: 'Andorra', dial: '+376' },
+  { iso: 'AO', name: 'Angola', dial: '+244' },
+  { iso: 'AI', name: 'Anguilla', dial: '+1-264' },
+  { iso: 'AG', name: 'Antigua and Barbuda', dial: '+1-268' },
+  { iso: 'AR', name: 'Argentina', dial: '+54' },
+  { iso: 'AM', name: 'Armenia', dial: '+374' },
+  { iso: 'AW', name: 'Aruba', dial: '+297' },
+  { iso: 'AU', name: 'Australia', dial: '+61' },
+  { iso: 'AT', name: 'Austria', dial: '+43' },
+  { iso: 'AZ', name: 'Azerbaijan', dial: '+994' },
+  { iso: 'BS', name: 'Bahamas', dial: '+1-242' },
+  { iso: 'BH', name: 'Bahrain', dial: '+973' },
+  { iso: 'BD', name: 'Bangladesh', dial: '+880' },
+  { iso: 'BB', name: 'Barbados', dial: '+1-246' },
+  { iso: 'BY', name: 'Belarus', dial: '+375' },
+  { iso: 'BE', name: 'Belgium', dial: '+32' },
+  { iso: 'BZ', name: 'Belize', dial: '+501' },
+  { iso: 'BJ', name: 'Benin', dial: '+229' },
+  { iso: 'BM', name: 'Bermuda', dial: '+1-441' },
+  { iso: 'BT', name: 'Bhutan', dial: '+975' },
+  { iso: 'BO', name: 'Bolivia', dial: '+591' },
+  { iso: 'BA', name: 'Bosnia and Herzegovina', dial: '+387' },
+  { iso: 'BW', name: 'Botswana', dial: '+267' },
+  { iso: 'BR', name: 'Brazil', dial: '+55' },
+  { iso: 'VG', name: 'British Virgin Islands', dial: '+1-284' },
+  { iso: 'BN', name: 'Brunei', dial: '+673' },
+  { iso: 'BG', name: 'Bulgaria', dial: '+359' },
+  { iso: 'BF', name: 'Burkina Faso', dial: '+226' },
+  { iso: 'BI', name: 'Burundi', dial: '+257' },
+  { iso: 'KH', name: 'Cambodia', dial: '+855' },
+  { iso: 'CM', name: 'Cameroon', dial: '+237' },
+  { iso: 'CA', name: 'Canada', dial: '+1' },
+  { iso: 'CV', name: 'Cape Verde', dial: '+238' },
+  { iso: 'KY', name: 'Cayman Islands', dial: '+1-345' },
+  { iso: 'CF', name: 'Central African Republic', dial: '+236' },
+  { iso: 'TD', name: 'Chad', dial: '+235' },
+  { iso: 'CL', name: 'Chile', dial: '+56' },
+  { iso: 'CN', name: 'China', dial: '+86' },
+  { iso: 'CO', name: 'Colombia', dial: '+57' },
+  { iso: 'KM', name: 'Comoros', dial: '+269' },
+  { iso: 'CG', name: 'Congo', dial: '+242' },
+  { iso: 'CD', name: 'Congo (DRC)', dial: '+243' },
+  { iso: 'CK', name: 'Cook Islands', dial: '+682' },
+  { iso: 'CR', name: 'Costa Rica', dial: '+506' },
+  { iso: 'CI', name: "Côte d'Ivoire", dial: '+225' },
+  { iso: 'HR', name: 'Croatia', dial: '+385' },
+  { iso: 'CU', name: 'Cuba', dial: '+53' },
+  { iso: 'CW', name: 'Curaçao', dial: '+599' },
+  { iso: 'CY', name: 'Cyprus', dial: '+357' },
+  { iso: 'CZ', name: 'Czechia', dial: '+420' },
+  { iso: 'DK', name: 'Denmark', dial: '+45' },
+  { iso: 'DJ', name: 'Djibouti', dial: '+253' },
+  { iso: 'DM', name: 'Dominica', dial: '+1-767' },
+  { iso: 'DO', name: 'Dominican Republic', dial: '+1-809' },
+  { iso: 'EC', name: 'Ecuador', dial: '+593' },
+  { iso: 'EG', name: 'Egypt', dial: '+20' },
+  { iso: 'SV', name: 'El Salvador', dial: '+503' },
+  { iso: 'GQ', name: 'Equatorial Guinea', dial: '+240' },
+  { iso: 'ER', name: 'Eritrea', dial: '+291' },
+  { iso: 'EE', name: 'Estonia', dial: '+372' },
+  { iso: 'SZ', name: 'Eswatini', dial: '+268' },
+  { iso: 'ET', name: 'Ethiopia', dial: '+251' },
+  { iso: 'FK', name: 'Falkland Islands', dial: '+500' },
+  { iso: 'FO', name: 'Faroe Islands', dial: '+298' },
+  { iso: 'FJ', name: 'Fiji', dial: '+679' },
+  { iso: 'FI', name: 'Finland', dial: '+358' },
+  { iso: 'FR', name: 'France', dial: '+33' },
+  { iso: 'GF', name: 'French Guiana', dial: '+594' },
+  { iso: 'PF', name: 'French Polynesia', dial: '+689' },
+  { iso: 'GA', name: 'Gabon', dial: '+241' },
+  { iso: 'GM', name: 'Gambia', dial: '+220' },
+  { iso: 'GE', name: 'Georgia', dial: '+995' },
+  { iso: 'DE', name: 'Germany', dial: '+49' },
+  { iso: 'GH', name: 'Ghana', dial: '+233' },
+  { iso: 'GI', name: 'Gibraltar', dial: '+350' },
+  { iso: 'GR', name: 'Greece', dial: '+30' },
+  { iso: 'GL', name: 'Greenland', dial: '+299' },
+  { iso: 'GD', name: 'Grenada', dial: '+1-473' },
+  { iso: 'GP', name: 'Guadeloupe', dial: '+590' },
+  { iso: 'GU', name: 'Guam', dial: '+1-671' },
+  { iso: 'GT', name: 'Guatemala', dial: '+502' },
+  { iso: 'GN', name: 'Guinea', dial: '+224' },
+  { iso: 'GW', name: 'Guinea-Bissau', dial: '+245' },
+  { iso: 'GY', name: 'Guyana', dial: '+592' },
+  { iso: 'HT', name: 'Haiti', dial: '+509' },
+  { iso: 'HN', name: 'Honduras', dial: '+504' },
+  { iso: 'HK', name: 'Hong Kong', dial: '+852' },
+  { iso: 'HU', name: 'Hungary', dial: '+36' },
+  { iso: 'IS', name: 'Iceland', dial: '+354' },
+  { iso: 'IN', name: 'India', dial: '+91' },
+  { iso: 'ID', name: 'Indonesia', dial: '+62' },
+  { iso: 'IR', name: 'Iran', dial: '+98' },
+  { iso: 'IQ', name: 'Iraq', dial: '+964' },
+  { iso: 'IE', name: 'Ireland', dial: '+353' },
+  { iso: 'IL', name: 'Israel', dial: '+972' },
+  { iso: 'IT', name: 'Italy', dial: '+39' },
+  { iso: 'JM', name: 'Jamaica', dial: '+1-876' },
+  { iso: 'JP', name: 'Japan', dial: '+81' },
+  { iso: 'JO', name: 'Jordan', dial: '+962' },
+  { iso: 'KZ', name: 'Kazakhstan', dial: '+7' },
+  { iso: 'KE', name: 'Kenya', dial: '+254' },
+  { iso: 'KI', name: 'Kiribati', dial: '+686' },
+  { iso: 'XK', name: 'Kosovo', dial: '+383' },
+  { iso: 'KW', name: 'Kuwait', dial: '+965' },
+  { iso: 'KG', name: 'Kyrgyzstan', dial: '+996' },
+  { iso: 'LA', name: 'Laos', dial: '+856' },
+  { iso: 'LV', name: 'Latvia', dial: '+371' },
+  { iso: 'LB', name: 'Lebanon', dial: '+961' },
+  { iso: 'LS', name: 'Lesotho', dial: '+266' },
+  { iso: 'LR', name: 'Liberia', dial: '+231' },
+  { iso: 'LY', name: 'Libya', dial: '+218' },
+  { iso: 'LI', name: 'Liechtenstein', dial: '+423' },
+  { iso: 'LT', name: 'Lithuania', dial: '+370' },
+  { iso: 'LU', name: 'Luxembourg', dial: '+352' },
+  { iso: 'MO', name: 'Macao', dial: '+853' },
+  { iso: 'MG', name: 'Madagascar', dial: '+261' },
+  { iso: 'MW', name: 'Malawi', dial: '+265' },
+  { iso: 'MY', name: 'Malaysia', dial: '+60' },
+  { iso: 'MV', name: 'Maldives', dial: '+960' },
+  { iso: 'ML', name: 'Mali', dial: '+223' },
+  { iso: 'MT', name: 'Malta', dial: '+356' },
+  { iso: 'MH', name: 'Marshall Islands', dial: '+692' },
+  { iso: 'MQ', name: 'Martinique', dial: '+596' },
+  { iso: 'MR', name: 'Mauritania', dial: '+222' },
+  { iso: 'MU', name: 'Mauritius', dial: '+230' },
+  { iso: 'YT', name: 'Mayotte', dial: '+262' },
+  { iso: 'MX', name: 'Mexico', dial: '+52' },
+  { iso: 'FM', name: 'Micronesia', dial: '+691' },
+  { iso: 'MD', name: 'Moldova', dial: '+373' },
+  { iso: 'MC', name: 'Monaco', dial: '+377' },
+  { iso: 'MN', name: 'Mongolia', dial: '+976' },
+  { iso: 'ME', name: 'Montenegro', dial: '+382' },
+  { iso: 'MS', name: 'Montserrat', dial: '+1-664' },
+  { iso: 'MA', name: 'Morocco', dial: '+212' },
+  { iso: 'MZ', name: 'Mozambique', dial: '+258' },
+  { iso: 'MM', name: 'Myanmar', dial: '+95' },
+  { iso: 'NA', name: 'Namibia', dial: '+264' },
+  { iso: 'NR', name: 'Nauru', dial: '+674' },
+  { iso: 'NP', name: 'Nepal', dial: '+977' },
+  { iso: 'NL', name: 'Netherlands', dial: '+31' },
+  { iso: 'NC', name: 'New Caledonia', dial: '+687' },
+  { iso: 'NZ', name: 'New Zealand', dial: '+64' },
+  { iso: 'NI', name: 'Nicaragua', dial: '+505' },
+  { iso: 'NE', name: 'Niger', dial: '+227' },
+  { iso: 'NG', name: 'Nigeria', dial: '+234' },
+  { iso: 'NU', name: 'Niue', dial: '+683' },
+  { iso: 'KP', name: 'North Korea', dial: '+850' },
+  { iso: 'MK', name: 'North Macedonia', dial: '+389' },
+  { iso: 'MP', name: 'Northern Mariana Islands', dial: '+1-670' },
+  { iso: 'NO', name: 'Norway', dial: '+47' },
+  { iso: 'OM', name: 'Oman', dial: '+968' },
+  { iso: 'PK', name: 'Pakistan', dial: '+92' },
+  { iso: 'PW', name: 'Palau', dial: '+680' },
+  { iso: 'PS', name: 'Palestine', dial: '+970' },
+  { iso: 'PA', name: 'Panama', dial: '+507' },
+  { iso: 'PG', name: 'Papua New Guinea', dial: '+675' },
+  { iso: 'PY', name: 'Paraguay', dial: '+595' },
+  { iso: 'PE', name: 'Peru', dial: '+51' },
+  { iso: 'PH', name: 'Philippines', dial: '+63' },
+  { iso: 'PL', name: 'Poland', dial: '+48' },
+  { iso: 'PT', name: 'Portugal', dial: '+351' },
+  { iso: 'PR', name: 'Puerto Rico', dial: '+1-787' },
+  { iso: 'QA', name: 'Qatar', dial: '+974' },
+  { iso: 'RE', name: 'Réunion', dial: '+262' },
+  { iso: 'RO', name: 'Romania', dial: '+40' },
+  { iso: 'RU', name: 'Russia', dial: '+7' },
+  { iso: 'RW', name: 'Rwanda', dial: '+250' },
+  { iso: 'BL', name: 'Saint Barthélemy', dial: '+590' },
+  { iso: 'SH', name: 'Saint Helena', dial: '+290' },
+  { iso: 'KN', name: 'Saint Kitts and Nevis', dial: '+1-869' },
+  { iso: 'LC', name: 'Saint Lucia', dial: '+1-758' },
+  { iso: 'MF', name: 'Saint Martin', dial: '+590' },
+  { iso: 'PM', name: 'Saint Pierre and Miquelon', dial: '+508' },
+  { iso: 'VC', name: 'Saint Vincent and the Grenadines', dial: '+1-784' },
+  { iso: 'WS', name: 'Samoa', dial: '+685' },
+  { iso: 'SM', name: 'San Marino', dial: '+378' },
+  { iso: 'ST', name: 'São Tomé and Príncipe', dial: '+239' },
+  { iso: 'SA', name: 'Saudi Arabia', dial: '+966' },
+  { iso: 'SN', name: 'Senegal', dial: '+221' },
+  { iso: 'RS', name: 'Serbia', dial: '+381' },
+  { iso: 'SC', name: 'Seychelles', dial: '+248' },
+  { iso: 'SL', name: 'Sierra Leone', dial: '+232' },
+  { iso: 'SG', name: 'Singapore', dial: '+65' },
+  { iso: 'SX', name: 'Sint Maarten', dial: '+1-721' },
+  { iso: 'SK', name: 'Slovakia', dial: '+421' },
+  { iso: 'SI', name: 'Slovenia', dial: '+386' },
+  { iso: 'SB', name: 'Solomon Islands', dial: '+677' },
+  { iso: 'SO', name: 'Somalia', dial: '+252' },
+  { iso: 'ZA', name: 'South Africa', dial: '+27' },
+  { iso: 'KR', name: 'South Korea', dial: '+82' },
+  { iso: 'SS', name: 'South Sudan', dial: '+211' },
+  { iso: 'ES', name: 'Spain', dial: '+34' },
+  { iso: 'LK', name: 'Sri Lanka', dial: '+94' },
+  { iso: 'SD', name: 'Sudan', dial: '+249' },
+  { iso: 'SR', name: 'Suriname', dial: '+597' },
+  { iso: 'SE', name: 'Sweden', dial: '+46' },
+  { iso: 'CH', name: 'Switzerland', dial: '+41' },
+  { iso: 'SY', name: 'Syria', dial: '+963' },
+  { iso: 'TW', name: 'Taiwan', dial: '+886' },
+  { iso: 'TJ', name: 'Tajikistan', dial: '+992' },
+  { iso: 'TZ', name: 'Tanzania', dial: '+255' },
+  { iso: 'TH', name: 'Thailand', dial: '+66' },
+  { iso: 'TL', name: 'Timor-Leste', dial: '+670' },
+  { iso: 'TG', name: 'Togo', dial: '+228' },
+  { iso: 'TO', name: 'Tonga', dial: '+676' },
+  { iso: 'TT', name: 'Trinidad and Tobago', dial: '+1-868' },
+  { iso: 'TN', name: 'Tunisia', dial: '+216' },
+  { iso: 'TR', name: 'Turkey', dial: '+90' },
+  { iso: 'TM', name: 'Turkmenistan', dial: '+993' },
+  { iso: 'TC', name: 'Turks and Caicos Islands', dial: '+1-649' },
+  { iso: 'TV', name: 'Tuvalu', dial: '+688' },
+  { iso: 'UG', name: 'Uganda', dial: '+256' },
+  { iso: 'UA', name: 'Ukraine', dial: '+380' },
+  { iso: 'AE', name: 'United Arab Emirates', dial: '+971' },
+  { iso: 'GB', name: 'United Kingdom', dial: '+44' },
+  { iso: 'US', name: 'United States', dial: '+1' },
+  { iso: 'UY', name: 'Uruguay', dial: '+598' },
+  { iso: 'VI', name: 'US Virgin Islands', dial: '+1-340' },
+  { iso: 'UZ', name: 'Uzbekistan', dial: '+998' },
+  { iso: 'VU', name: 'Vanuatu', dial: '+678' },
+  { iso: 'VA', name: 'Vatican City', dial: '+379' },
+  { iso: 'VE', name: 'Venezuela', dial: '+58' },
+  { iso: 'VN', name: 'Vietnam', dial: '+84' },
+  { iso: 'WF', name: 'Wallis and Futuna', dial: '+681' },
+  { iso: 'YE', name: 'Yemen', dial: '+967' },
+  { iso: 'ZM', name: 'Zambia', dial: '+260' },
+  { iso: 'ZW', name: 'Zimbabwe', dial: '+263' },
+];
+
 /* ─────────────────────────────────────────────
    Main Auth component
 ───────────────────────────────────────────── */
 export default function Auth() {
   const router = useRouter();
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -133,8 +369,8 @@ export default function Auth() {
         .from(leftRef.current,    { x: -40, opacity: 0, duration: 0.75 }, '-=0.55')
         .from(headingRef.current, { y: 22,  opacity: 0, duration: 0.55 }, '-=0.45')
         .from(subRef.current,     { y: 15,  opacity: 0, duration: 0.45 }, '-=0.35')
-        .from('.a-field',         { y: 14,  opacity: 0, stagger: 0.08, duration: 0.45 }, '-=0.3')
-        .from('.a-btn',           { y: 10,  opacity: 0, duration: 0.4 }, '-=0.15');
+        .from('.a-field',         { y: 14, stagger: 0.08, duration: 0.45 }, '-=0.3')
+        .from('.a-btn',           { y: 10, duration: 0.4 }, '-=0.15');
     });
     return () => ctx.revert();
   }, []);
@@ -287,8 +523,36 @@ export default function Auth() {
     'Secure your account',
   ];
 
+  useEffect(() => {
+    const root = document.documentElement;
+    const updateTheme = () => setIsDarkTheme(root.classList.contains('dark'));
+
+    updateTheme();
+
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="w-full h-full bg-[#09090e] flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="w-full min-h-screen bg-transparent flex items-start lg:items-center justify-center p-4 pb-10 relative overflow-y-auto">
+
+      <div className="fixed inset-0 z-0" aria-hidden style={{ pointerEvents: 'none' }}>
+        <div className="absolute inset-0 opacity-68 dark:opacity-45" style={{ pointerEvents: 'none' }}>
+          <Silk
+            speed={3.4}
+            scale={0.95}
+            color={isDarkTheme ? '#7c3aed' : '#1e3a8a'}
+            noiseIntensity={1.1}
+            rotation={0.12}
+          />
+        </div>
+        <div
+          className="absolute inset-0 niche-animated-gradient bg-[linear-gradient(120deg,rgba(62,45,78,0.9),rgba(86,50,86,0.86),rgba(72,46,84,0.84),rgba(52,40,68,0.9))] dark:bg-[linear-gradient(120deg,rgba(8,8,12,0.95),rgba(34,8,28,0.85),rgba(16,8,26,0.86),rgba(6,6,10,0.95))]"
+          style={{ pointerEvents: 'none' }}
+        />
+      </div>
 
       <div className="absolute inset-0 opacity-35 pointer-events-none" style={{ background: 'radial-gradient(circle at 20% 15%, rgba(251,113,133,0.2), transparent 38%), radial-gradient(circle at 85% 75%, rgba(251,146,60,0.14), transparent 42%)' }} />
 
@@ -300,7 +564,7 @@ export default function Auth() {
       {/* card */}
       <div
         ref={cardRef}
-        className="w-full max-w-5xl grid lg:grid-cols-[1.15fr,1fr] rounded-[32px] overflow-hidden border border-white/[0.07] shadow-[0_32px_80px_rgba(0,0,0,0.7)]"
+        className="relative z-10 w-full max-w-5xl grid lg:grid-cols-[1.15fr,1fr] rounded-[32px] border border-white/[0.07] shadow-[0_32px_80px_rgba(0,0,0,0.7)]"
       >
         {/* ── LEFT PANEL ── */}
         <div
@@ -357,7 +621,7 @@ export default function Auth() {
         </div>
 
         {/* ── RIGHT PANEL ── */}
-        <div className="bg-[#111118] p-8 sm:p-10 flex flex-col justify-center min-h-[620px]">
+        <div className="bg-[#111118] p-8 sm:p-10 flex flex-col justify-start lg:justify-center min-h-[620px]">
 
           {/* mobile wordmark */}
           <div className="lg:hidden mb-8">
@@ -448,9 +712,22 @@ export default function Auth() {
                       onChange={v => updateForm('email', v)} icon={Mail} placeholder="you@example.com" />
                   </div>
                   <div className="a-field flex gap-2">
-                    <div className="w-[88px] flex-shrink-0">
-                      <InputField label="Code" type="text" value={form.countryCode}
-                        onChange={v => updateForm('countryCode', v)} icon={Phone} />
+                    <div className="w-[170px] flex-shrink-0">
+                      <label className="text-[11px] text-white/40 font-medium pl-1 block mb-1.5">Country code</label>
+                      <div className="flex items-center gap-2 px-3 py-3.5 rounded-2xl border border-white/10 bg-white/[0.04] focus-within:border-rose-400/55 transition-colors">
+                        <Phone className="w-4 h-4 text-white/30" />
+                        <select
+                          value={form.countryCode}
+                          onChange={(e) => updateForm('countryCode', e.target.value)}
+                          className="w-full bg-transparent text-white text-sm outline-none"
+                        >
+                          {COUNTRY_DIAL_CODES.map((c) => (
+                            <option key={`${c.iso}-${c.dial}`} value={c.dial} className="bg-[#111118] text-white">
+                              {c.name} ({c.dial})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <InputField label="Phone" type="tel" value={form.phoneNumber}
@@ -569,32 +846,34 @@ export default function Auth() {
               )}
 
               {/* CTA */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="a-btn a-field w-full py-[15px] rounded-2xl font-semibold text-sm text-white flex items-center justify-center gap-2 mt-1 transition-all duration-300 active:scale-[0.98] disabled:opacity-55 disabled:cursor-not-allowed"
-                style={{
-                  background: 'linear-gradient(135deg,#fb7185 0%,#fb923c 55%,#ef4444 100%)',
-                  boxShadow: '0 10px 36px rgba(251,113,133,0.35)',
-                }}
-                onMouseEnter={e => gsap.to(e.currentTarget, { scale: 1.018, y: -1, duration: 0.2 })}
-                onMouseLeave={e => gsap.to(e.currentTarget, { scale: 1, y: 0, duration: 0.2 })}
-              >
-                {isSubmitting ? (
-                  <>
-                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Please wait…
-                  </>
-                ) : (
-                  <>
-                    {isLogin ? 'Sign in' : step === 3 ? 'Create account' : 'Continue'}
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+              <div className="a-field pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="a-btn w-full py-[15px] rounded-2xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all duration-300 active:scale-[0.98] disabled:opacity-55 disabled:cursor-not-allowed"
+                  style={{
+                    background: 'linear-gradient(135deg,#fb7185 0%,#fb923c 55%,#ef4444 100%)',
+                    boxShadow: '0 10px 36px rgba(251,113,133,0.35)',
+                  }}
+                  onMouseEnter={e => gsap.to(e.currentTarget, { scale: 1.018, y: -1, duration: 0.2 })}
+                  onMouseLeave={e => gsap.to(e.currentTarget, { scale: 1, y: 0, duration: 0.2 })}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Please wait…
+                    </>
+                  ) : (
+                    <>
+                      {isLogin ? 'Sign in' : step === 3 ? 'Create account' : 'Continue'}
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </form>
 

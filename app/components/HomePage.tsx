@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion, useScroll, useSpring, useTransform } from 'framer-motion';
 import { Heart, MapPin, Users, Sparkles, ShieldCheck, Camera, Wand2, Star, Flame, MessageCircleHeart, Briefcase, Leaf, Rainbow, Layers3, ArrowUpRight, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ThemeToggle from './ThemeToggle';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import Silk from '@/components/Silk';
 
 /* ─── Framer Motion variants (used on a few static reveals only) ─── */
 const container = {
@@ -31,11 +30,18 @@ export default function HomePage() {
 
   const [typedBrand, setTypedBrand] = useState('');
   const [typedVibe, setTypedVibe] = useState('');
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
   const inspirationRef = useRef<HTMLDivElement | null>(null);
 
   const { scrollYProgress } = useScroll();
   const heroY = useTransform(scrollYProgress, [0, 0.35], [0, -70]);
   const orbY = useTransform(scrollYProgress, [0, 0.35], [0, 90]);
+  const { scrollYProgress: howProgressRaw } = useScroll({
+    target: howItWorksRef,
+    offset: ['start 90%', 'end 10%'],
+  });
+  const howProgress = useSpring(howProgressRaw, { stiffness: 120, damping: 28, mass: 0.32 });
+  const howDotY = useTransform(howProgress, [0, 1], ['2%', '98%']);
   const { scrollYProgress: inspirationProgress } = useScroll({
     target: inspirationRef,
     offset: ['start end', 'end start'],
@@ -62,6 +68,12 @@ export default function HomePage() {
     { name: 'Growth Loop', tone: 'Invite + engage', icon: Briefcase },
   ];
 
+  const scrollToSection = (id: 'hero' | 'how' | 'features' | 'why') => {
+    const section = document.getElementById(id) ?? document.querySelector<HTMLElement>(`[data-section-id="${id}"]`);
+    if (!section) return;
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
 
 
   useEffect(() => {
@@ -76,299 +88,20 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, []);
 
-  useLayoutEffect(() => {
-    gsap.registerPlugin(ScrollTrigger);
-
-    const ctx = gsap.context(() => {
-
-      /* ── 1. Hero entrance timeline ─────────────────────────────── */
-      const heroTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-      heroTl
-        .fromTo('[data-gsap="hero-title"]',
-          { opacity: 0, y: 48, filter: 'blur(8px)' },
-          { opacity: 1, y: 0, filter: 'blur(0px)', duration: 1.0 })
-        .fromTo('[data-gsap="hero-sub"]',
-          { opacity: 0, y: 24 },
-          { opacity: 1, y: 0, duration: 0.75 }, '-=0.55')
-        .fromTo('[data-gsap="hero-cta"]',
-          { opacity: 0, scale: 0.92 },
-          { opacity: 1, scale: 1, duration: 0.6 }, '-=0.45')
-        .fromTo('[data-gsap="hero-card"]',
-          { opacity: 0, y: 36, rotateX: 6 },
-          { opacity: 1, y: 0, rotateX: 0, duration: 0.85 }, '-=0.5');
-
-      /* ── 2. Float orb idle ─────────────────────────────────────── */
-      gsap.to('[data-gsap="float-orb"]', {
-        y: -14, duration: 2.8, repeat: -1, yoyo: true, ease: 'sine.inOut',
-      });
-
-      /* ── 3. Parallax media on scroll ───────────────────────────── */
-      gsap.utils.toArray<HTMLElement>('[data-gsap="parallax-media"]').forEach((el, i) => {
-        gsap.to(el, {
-          yPercent: i % 2 === 0 ? -10 : -16,
-          ease: 'none',
-          scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: 1.2 },
-        });
-      });
-
-      /* ── 4. Card stagger (reveal-card) ─────────────────────────── */
-      gsap.utils.toArray<HTMLElement>('[data-gsap="reveal-card"]').forEach((el, i) => {
-        gsap.fromTo(el,
-          { opacity: 0, y: 44, scale: 0.96 },
-          {
-            opacity: 1, y: 0, scale: 1, duration: 0.8, delay: i * 0.06, ease: 'power3.out',
-            scrollTrigger: { trigger: el, start: 'top 88%', toggleActions: 'play none none reverse' },
-          }
-        );
-      });
-
-      /* ── 5. Feature zone chips ─────────────────────────────────── */
-      const featureTl = gsap.timeline({
-        scrollTrigger: { trigger: '[data-gsap="feature-zone"]', start: 'top 74%' },
-      });
-      featureTl
-        .fromTo('[data-gsap="feature-heading"]',
-          { opacity: 0, x: -22 }, { opacity: 1, x: 0, duration: 0.6, ease: 'power2.out' })
-        .fromTo('[data-gsap="feature-chip"]',
-          { opacity: 0, y: 14, scale: 0.94 },
-          { opacity: 1, y: 0, scale: 1, stagger: 0.028, duration: 0.38, ease: 'power2.out' },
-          '-=0.25');
-
-      /* ── 6. Depth cards ────────────────────────────────────────── */
-      gsap.utils.toArray<HTMLElement>('[data-gsap="depth-card"]').forEach((el, i) => {
-        gsap.fromTo(el,
-          { opacity: 0, y: 52, rotateX: 10 },
-          {
-            opacity: 1, y: 0, rotateX: 0, duration: 0.9, delay: i * 0.08, ease: 'power3.out',
-            scrollTrigger: { trigger: el, start: 'top 86%' },
-          }
-        );
-      });
-
-      /* ── 7. Global section slide-up scrub ──────────────────────── */
-      gsap.utils.toArray<HTMLElement>('[data-scroll-section="true"]').forEach((section) => {
-        gsap.fromTo(section,
-          { y: 42, opacity: 0.85 },
-          {
-            y: 0, opacity: 1, ease: 'none',
-            scrollTrigger: { trigger: section, start: 'top 94%', end: 'top 44%', scrub: 1.2 },
-          }
-        );
-      });
-
-      /* ── 7b. Vertical reveal + subtle parallax for depth ───────── */
-      gsap.utils.toArray<HTMLElement>('[data-gsap="v-reveal"]').forEach((el, i) => {
-        gsap.fromTo(
-          el,
-          { opacity: 0, y: 56, scale: 0.985 },
-          {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            duration: 0.78,
-            delay: i * 0.02,
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: el,
-              start: 'top 86%',
-              toggleActions: 'play none none reverse',
-            },
-          }
-        );
-      });
-
-      gsap.utils.toArray<HTMLElement>('[data-gsap="v-parallax"]').forEach((el, i) => {
-        gsap.to(el, {
-          yPercent: i % 2 === 0 ? -8 : -12,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: el,
-            start: 'top bottom',
-            end: 'bottom top',
-            scrub: 1.4,
-          },
-        });
-      });
-
-      /* ── 8. How It Works — scroll-driven step highlights ───────── */
-      const steps = stepRefs.current.filter(Boolean);
-      const progressLine = progressLineRef.current;
-
-      if (steps.length && howItWorksRef.current) {
-        // Set initial dimmed state for all steps
-        gsap.set(steps, { opacity: 0.28, y: 28 });
-
-        steps.forEach((step, idx) => {
-          // Each step fades + slides in as it enters
-          ScrollTrigger.create({
-            trigger: step,
-            start: 'top 72%',
-            end: 'top 32%',
-            onEnter: () => {
-              // Activate this step
-              gsap.to(step, { opacity: 1, y: 0, duration: 0.65, ease: 'power3.out' });
-              gsap.to(step.querySelector('[data-step-num]'), {
-                color: '#f43f5e', scale: 1.05, duration: 0.4, ease: 'power2.out',
-              });
-              // Dim all others
-              steps.forEach((s, i) => {
-                if (i !== idx) {
-                  gsap.to(s, { opacity: 0.3, duration: 0.4, ease: 'power2.out' });
-                  gsap.to(s.querySelector('[data-step-num]'), { clearProps: 'color', scale: 1, duration: 0.4 });
-                }
-              });
-              // Advance progress line
-              if (progressLine) {
-                gsap.to(progressLine, {
-                  scaleY: (idx + 1) / steps.length,
-                  duration: 0.55,
-                  ease: 'power2.out',
-                });
-              }
-            },
-            onLeaveBack: () => {
-              if (idx === 0) {
-                gsap.to(step, { opacity: 0.28, duration: 0.35 });
-                gsap.to(step.querySelector('[data-step-num]'), { clearProps: 'color', scale: 1, duration: 0.35 });
-                if (progressLine) gsap.to(progressLine, { scaleY: 0, duration: 0.4 });
-              }
-            },
-          });
-        });
-      }
-
-      /* ── 9. Stats counter roll-up ──────────────────────────────── */
-      gsap.utils.toArray<HTMLElement>('[data-gsap="stat-value"]').forEach((el) => {
-        gsap.fromTo(el,
-          { opacity: 0, y: 18, scale: 0.88 },
-          {
-            opacity: 1, y: 0, scale: 1, duration: 0.7, ease: 'back.out(1.5)',
-            scrollTrigger: { trigger: el, start: 'top 85%' },
-          }
-        );
-      });
-
-      /* ── 10. Footer reveal timeline ────────────────────────────── */
-      const footerTl = gsap.timeline({
-        scrollTrigger: {
-          trigger: '[data-gsap="footer-wrap"]',
-          start: 'top 88%',
-        },
-      });
-
-      footerTl
-        .fromTo(
-          '[data-gsap="footer-brand"]',
-          { opacity: 0, y: 28 },
-          { opacity: 1, y: 0, duration: 0.7, ease: 'power2.out' }
-        )
-        .fromTo(
-          '[data-gsap="footer-col"]',
-          { opacity: 0, y: 24 },
-          { opacity: 1, y: 0, duration: 0.55, stagger: 0.08, ease: 'power2.out' },
-          '-=0.35'
-        )
-        .fromTo(
-          '[data-gsap="footer-bottom"]',
-          { opacity: 0, y: 16 },
-          { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' },
-          '-=0.15'
-        );
-
-    }, pageRef);
-
-    return () => ctx.revert();
-  }, []);
-
-  /* ── Active nav highlight on scroll ─────────────────────────────── */
   useEffect(() => {
-    const sections = [
-      { id: 'hero', el: document.querySelector<HTMLElement>('[data-section-id="hero"]') },
-      { id: 'how', el: document.querySelector<HTMLElement>('[data-section-id="how"]') },
-      { id: 'features', el: document.querySelector<HTMLElement>('[data-section-id="features"]') },
-      { id: 'why', el: document.querySelector<HTMLElement>('[data-section-id="why"]') },
-    ];
+    const root = document.documentElement;
+    const updateTheme = () => setIsDarkTheme(root.classList.contains('dark'));
 
-    const triggers = sections.map(({ id, el }) => {
-      if (!el) return null;
-      return ScrollTrigger.create({
-        trigger: el,
-        start: 'top 55%',
-        end: 'bottom 45%',
-        onToggle: (self) => {
-          const link = navLinksRef.current.get(id);
-          if (!link) return;
-          if (self.isActive) {
-            gsap.to(link, { color: '#f43f5e', duration: 0.25 });
-          } else {
-            gsap.to(link, { color: '', duration: 0.25 });
-          }
-        },
-      });
-    });
+    updateTheme();
 
-    return () => triggers.forEach((t) => t?.kill());
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
   }, []);
 
-  /* ── Cursor glow + 3D card tilt ─────────────────────────────────── */
-  useEffect(() => {
-    const zone = pageRef.current;
-    const glow = pageRef.current?.querySelector('[data-gsap="cursor-glow"]') as HTMLElement | null;
-    const cards = pageRef.current?.querySelectorAll<HTMLElement>('[data-mouse-card="true"]');
-
-    if (!zone || !glow || !cards) return;
-
-    const xTo = gsap.quickTo(glow, 'x', { duration: 0.42, ease: 'power3.out' });
-    const yTo = gsap.quickTo(glow, 'y', { duration: 0.42, ease: 'power3.out' });
-
-    const onZoneMove = (e: MouseEvent) => {
-      xTo(e.clientX - 100);
-      yTo(e.clientY - 100);
-    };
-
-    const onZoneEnter = () => gsap.to(glow, { opacity: 1, duration: 0.25, ease: 'power2.out' });
-    const onZoneLeave = () => gsap.to(glow, { opacity: 0, duration: 0.25, ease: 'power2.out' });
-
-    zone.addEventListener('mousemove', onZoneMove);
-    zone.addEventListener('mouseenter', onZoneEnter);
-    zone.addEventListener('mouseleave', onZoneLeave);
-
-    const cleanups: Array<() => void> = [];
-    cards.forEach((card) => {
-      const onMove = (e: MouseEvent) => {
-        const rect = card.getBoundingClientRect();
-        const px = (e.clientX - rect.left) / rect.width;
-        const py = (e.clientY - rect.top) / rect.height;
-        gsap.to(card, {
-          rotateY: (px - 0.5) * 16,
-          rotateX: -(py - 0.5) * 14,
-          scale: 1.04,
-          duration: 0.35,
-          ease: 'power2.out',
-          transformPerspective: 1000,
-          transformOrigin: 'center center',
-        });
-      };
-
-      const onLeave = () => {
-        gsap.to(card, { rotateY: 0, rotateX: 0, scale: 1, duration: 0.45, ease: 'power3.out' });
-      };
-
-      card.addEventListener('mousemove', onMove);
-      card.addEventListener('mouseleave', onLeave);
-      cleanups.push(() => {
-        card.removeEventListener('mousemove', onMove);
-        card.removeEventListener('mouseleave', onLeave);
-      });
-    });
-
-    return () => {
-      zone.removeEventListener('mousemove', onZoneMove);
-      zone.removeEventListener('mouseenter', onZoneEnter);
-      zone.removeEventListener('mouseleave', onZoneLeave);
-      cleanups.forEach((fn) => fn());
-    };
-  }, []);
+  // Homepage render-first mode: keep animations lightweight and avoid
+  // scroll-trigger dependencies that can hide content on some clients.
 
   useEffect(() => {
     const words = ['chemistry', 'energy', 'humor', 'intent', 'vibe'];
@@ -407,15 +140,32 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div ref={pageRef} className="bg-white dark:bg-black min-h-screen overflow-x-hidden">
-      <div data-gsap="cursor-glow" className="pointer-events-none fixed z-[60] h-52 w-52 rounded-full bg-gradient-to-br from-pink-500/25 to-fuchsia-500/25 blur-3xl opacity-0 hidden lg:block" />
+    <div ref={pageRef} className="relative min-h-screen overflow-x-hidden bg-transparent">
+      <div className="fixed inset-0 z-0" aria-hidden style={{ pointerEvents: 'none' }}>
+        <div className="absolute inset-0 opacity-68 dark:opacity-45" style={{ pointerEvents: 'none' }}>
+          <Silk
+            speed={3.4}
+            scale={0.95}
+            color={isDarkTheme ? '#7c3aed' : '#1e3a8a'}
+            noiseIntensity={1.1}
+            rotation={0.12}
+          />
+        </div>
+        <motion.div
+          className="absolute inset-0 niche-animated-gradient bg-[linear-gradient(120deg,rgba(62,45,78,0.9),rgba(86,50,86,0.86),rgba(72,46,84,0.84),rgba(52,40,68,0.9))] dark:bg-[linear-gradient(120deg,rgba(8,8,12,0.95),rgba(34,8,28,0.85),rgba(16,8,26,0.86),rgba(6,6,10,0.95))]"
+          animate={{ scale: [1, 1.04, 1], opacity: [0.92, 1, 0.92] }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ pointerEvents: 'none' }}
+        />
+      </div>
+      <div className="relative z-10">
       <motion.div
-        className="fixed top-0 left-0 right-0 h-1.5 z-[70] bg-gradient-to-r from-red-500 via-pink-500 to-fuchsia-500 origin-left"
+        className="pointer-events-none fixed top-0 left-0 right-0 h-1.5 z-[70] bg-gradient-to-r from-red-500 via-pink-500 to-fuchsia-500 origin-left"
         style={{ scaleX: scrollYProgress }}
       />
 
       {/* Navigation */}
-      <nav className="fixed top-0 w-full bg-white/80 dark:bg-black/80 backdrop-blur-lg z-50 border-b border-gray-200 dark:border-gray-800">
+      <nav className="pointer-events-auto fixed top-0 w-full z-[90] border-b border-white/15 dark:border-white/10 bg-[linear-gradient(120deg,rgba(53,38,74,0.72),rgba(72,40,86,0.66),rgba(42,32,64,0.72))] dark:bg-[linear-gradient(120deg,rgba(10,10,16,0.78),rgba(26,10,30,0.72),rgba(10,10,16,0.78))] backdrop-blur-xl animate-in fade-in duration-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <motion.div 
             className="text-2xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent"
@@ -425,19 +175,21 @@ export default function HomePage() {
             <span className="animate-pulse">|</span>
           </motion.div>
           <div className="hidden md:flex items-center gap-6 mr-4">
-            {(['how', 'features', 'why'] as const).map((id) => (
-              <a
+            {(['how', 'features', 'why'] as const).map((id, i) => (
+              <motion.button
                 key={id}
-                href={`#${id}`}
-                ref={(el) => { if (el) navLinksRef.current.set(id, el); }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.querySelector(`[data-section-id="${id}"]`)?.scrollIntoView({ behavior: 'smooth' });
+                type="button"
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.12 + i * 0.08, duration: 0.35 }}
+                whileHover={{ y: -1 }}
+                onClick={() => {
+                  scrollToSection(id);
                 }}
                 className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors capitalize"
               >
                 {id === 'how' ? 'How it works' : id === 'features' ? 'Features' : 'Why Niche'}
-              </a>
+              </motion.button>
             ))}
           </div>
           <div className="flex items-center gap-3">
@@ -463,37 +215,39 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section id="hero" data-scroll-section="true" data-section-id="hero" className="pt-32 pb-20 px-4 bg-white dark:bg-black relative">
+      <section id="hero" data-scroll-section="true" data-section-id="hero" className="relative scroll-mt-28 overflow-hidden pt-32 pb-20 px-4 bg-transparent">
         <motion.div style={{ y: orbY }} data-gsap="v-parallax" className="absolute -top-20 -left-20 h-72 w-72 rounded-full bg-rose-300/20 blur-3xl" />
-        <motion.div style={{ y: heroY }} data-gsap="v-parallax" className="absolute top-24 -right-20 h-72 w-72 rounded-full bg-fuchsia-300/20 blur-3xl" />
-        <div data-gsap="v-reveal" className="max-w-6xl mx-auto grid gap-12 lg:grid-cols-2 items-center">
+        <motion.div style={{ y: heroY }} data-gsap="v-parallax" className="absolute top-24 -right-20 h-72 w-72 rounded-full bg-fuchsia-300/20 blur-3xl niche-glow-pulse" />
+        <div data-gsap="v-reveal" className="relative z-10 max-w-6xl mx-auto grid gap-12 lg:grid-cols-2 items-center">
           <div className="text-center lg:text-left">
             <h1
               data-gsap="hero-title"
-              className="text-5xl sm:text-6xl lg:text-7xl font-bold text-black dark:text-white mb-6 tracking-tight opacity-0"
+
+              className="text-5xl sm:text-6xl lg:text-7xl font-bold text-black dark:text-white mb-6 tracking-tight animate-in fade-in-0 slide-in-from-bottom-5 duration-700"
             >
               Match by <span className="bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">{typedVibe || 'vibe'}</span><span className="text-red-500">|</span>, not noise.
             </h1>
 
             <p
               data-gsap="hero-sub"
-              className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl leading-relaxed opacity-0"
+              className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl leading-relaxed animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-150"
             >
               Niche blends swipe discovery, interest-first profiles, and event communities so every connection actually feels relevant.
             </p>
 
-            <div data-gsap="hero-cta" className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start opacity-0">
+            <div data-gsap="hero-cta" className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-in fade-in-0 slide-in-from-bottom-4 duration-700 delay-300">
               <motion.button
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
                 onClick={() => router.push('/auth')}
-                className="px-8 py-4 bg-gradient-to-r from-red-500 to-pink-500 text-white font-semibold rounded-full text-lg transition shadow-lg"
+                className="px-8 py-4 niche-animated-gradient bg-gradient-to-r from-red-500 via-pink-500 to-fuchsia-500 text-white font-semibold rounded-full text-lg transition shadow-lg"
               >
                 Start Matching
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
+                onClick={() => scrollToSection('features')}
                 className="px-8 py-4 border-2 border-gray-300 dark:border-gray-700 text-black dark:text-white font-semibold rounded-full text-lg hover:bg-gray-50 dark:hover:bg-gray-900 transition"
               >
                 Explore Features
@@ -501,7 +255,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <motion.div data-gsap="hero-card" className="relative mx-auto w-full max-w-md opacity-0">
+          <motion.div data-gsap="hero-card" className="relative mx-auto w-full max-w-md animate-in fade-in-0 slide-in-from-right-6 duration-700 delay-200 niche-float">
             <div className="absolute -inset-6 rounded-[2rem] bg-gradient-to-r from-red-400/25 to-fuchsia-400/25 blur-2xl" />
             <div className="relative rounded-[2rem] border border-white/40 dark:border-white/10 bg-white/80 dark:bg-white/5 backdrop-blur p-5 shadow-2xl">
               <div data-gsap="parallax-media" className="rounded-2xl bg-gradient-to-br from-red-100 to-pink-200 dark:from-gray-800 dark:to-gray-700 p-6 mb-4">
@@ -539,7 +293,6 @@ export default function HomePage() {
                 {["A", "R", "K"].map((initial, i) => (
                   <motion.div
                     key={initial}
-                    initial={{ opacity: 0, y: 10 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.1 }}
                     viewport={{ once: true }}
@@ -561,13 +314,12 @@ export default function HomePage() {
         ref={howItWorksRef}
         data-scroll-section="true"
         data-section-id="how"
-        className="py-28 px-4 bg-white dark:bg-black text-black dark:text-white overflow-hidden"
+        className="relative scroll-mt-28 py-28 px-4 bg-transparent text-black dark:text-white overflow-hidden animate-in fade-in-0 slide-in-from-bottom-4 duration-700"
       >
         <div data-gsap="v-reveal" className="max-w-4xl mx-auto">
 
           {/* Section label */}
           <motion.p
-            initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="text-xs uppercase tracking-[0.22em] text-gray-500 dark:text-white/40 mb-16"
@@ -579,11 +331,15 @@ export default function HomePage() {
           <div className="relative flex gap-10">
 
             {/* Progress line track */}
-            <div className="hidden md:block relative flex-shrink-0 w-px bg-gray-200 dark:bg-white/10 mt-2" style={{ minHeight: '100%' }}>
-              <div
+            <div className="hidden md:block relative self-stretch flex-shrink-0 w-px mt-2 bg-gray-200 dark:bg-white/10">
+              <motion.div
                 ref={progressLineRef}
                 className="absolute top-0 left-0 w-full bg-gradient-to-b from-rose-500 to-pink-500 origin-top"
-                style={{ height: '100%', transform: 'scaleY(0)', transformOrigin: 'top' }}
+                style={{ top: 0, bottom: 0, scaleY: howProgress, transformOrigin: 'top' }}
+              />
+              <motion.div
+                className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 h-2.5 w-2.5 rounded-full bg-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.8)]"
+                style={{ top: howDotY }}
               />
             </div>
 
@@ -611,18 +367,26 @@ export default function HomePage() {
               ].map((step, idx) => {
                 const Icon = step.icon;
                 return (
-                  <div
+                  <motion.div
                     key={step.num}
                     ref={(el) => { if (el) stepRefs.current[idx] = el; }}
                     className="grid grid-cols-[72px_1fr_48px] items-start gap-6 py-12"
                     style={{ willChange: 'transform, opacity' }}
+                    initial={{ opacity: 0.35, y: 26 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    whileHover={{ x: 4 }}
+                    transition={{ duration: 0.45, delay: idx * 0.08, ease: 'easeOut' }}
+                    viewport={{ once: false, amount: 0.55 }}
                   >
-                    <span
+                    <motion.span
                       data-step-num
                       className="text-5xl font-bold leading-none text-gray-300 dark:text-white/20"
+                      whileInView={{ scale: [0.96, 1.04, 1] }}
+                      transition={{ duration: 0.4, delay: idx * 0.07 }}
+                      viewport={{ once: false, amount: 0.6 }}
                     >
                       {step.num}
-                    </span>
+                    </motion.span>
                     <div>
                       <h3 className="text-2xl sm:text-3xl font-semibold mb-3 leading-snug">
                         {step.title}
@@ -632,7 +396,7 @@ export default function HomePage() {
                     <div className="mt-1 w-10 h-10 rounded-xl border border-gray-300 dark:border-white/12 bg-gray-100 dark:bg-white/5 flex items-center justify-center flex-shrink-0">
                       <Icon className="w-4 h-4 text-gray-600 dark:text-white/60" />
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>
@@ -644,13 +408,21 @@ export default function HomePage() {
               { value: '12k+', label: 'Active members' },
               { value: '94%', label: 'Quality match score' },
               { value: '3×', label: 'More real conversations' },
-            ].map((stat) => (
-              <div key={stat.label} data-gsap="stat-value" className="bg-white dark:bg-black px-8 py-8 text-center">
+            ].map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                data-gsap="stat-value"
+                className="bg-white dark:bg-black px-8 py-8 text-center"
+                whileInView={{ opacity: [0.8, 1], y: [16, 0] }}
+                whileHover={{ y: -6, scale: 1.02 }}
+                transition={{ duration: 0.4, delay: i * 0.06 }}
+                viewport={{ once: true, amount: 0.5 }}
+              >
                 <p className="text-4xl sm:text-5xl font-bold mb-1 bg-gradient-to-br from-gray-900 to-gray-500 dark:from-white dark:to-white/55 bg-clip-text text-transparent">
                   {stat.value}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-white/40 uppercase tracking-widest">{stat.label}</p>
-              </div>
+              </motion.div>
             ))}
           </div>
 
@@ -658,10 +430,9 @@ export default function HomePage() {
       </section>
 
       {/* Inspiration + 3D Models */}
-      <section id="features" data-scroll-section="true" data-section-id="features" ref={inspirationRef} data-gsap="feature-zone" className="py-20 px-4 bg-white dark:bg-black overflow-hidden">
+      <section id="features" data-scroll-section="true" data-section-id="features" ref={inspirationRef} data-gsap="feature-zone" className="relative scroll-mt-28 py-20 px-4 bg-transparent overflow-hidden animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <div data-gsap="v-reveal" className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
           <motion.div
-            initial={{ opacity: 0, x: -24 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
           >
@@ -677,7 +448,6 @@ export default function HomePage() {
                   <motion.div
                     data-gsap="feature-chip"
                     key={app.name}
-                    initial={{ opacity: 0, y: 10 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: idx * 0.03 }}
@@ -694,7 +464,6 @@ export default function HomePage() {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, x: 24 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             className="relative h-[420px]"
@@ -742,10 +511,9 @@ export default function HomePage() {
       </section>
 
       {/* Features Grid */}
-      <section data-scroll-section="true" className="py-20 px-4 bg-white dark:bg-black">
+      <section data-scroll-section="true" className="py-20 px-4 bg-transparent animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <div data-gsap="v-reveal" className="max-w-6xl mx-auto">
           <motion.h2 
-            initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             className="text-4xl font-bold text-center text-black dark:text-white mb-16"
@@ -755,7 +523,6 @@ export default function HomePage() {
 
           <motion.div 
             className="grid grid-cols-1 md:grid-cols-3 gap-8"
-            initial="hidden"
             whileInView="show"
             viewport={{ once: true }}
             variants={container}
@@ -800,10 +567,9 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section id="why" data-scroll-section="true" data-section-id="why" className="py-20 px-4 bg-white dark:bg-black overflow-hidden">
+      <section id="why" data-scroll-section="true" data-section-id="why" className="relative scroll-mt-28 py-20 px-4 bg-transparent overflow-hidden animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <div data-gsap="v-reveal" className="max-w-6xl mx-auto">
           <motion.h2 
-            initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             className="text-4xl font-bold text-black dark:text-white mb-4"
@@ -811,7 +577,6 @@ export default function HomePage() {
             Why Niche?
           </motion.h2>
           <motion.p
-            initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="text-gray-600 dark:text-gray-300 mb-10 max-w-2xl"
@@ -820,7 +585,6 @@ export default function HomePage() {
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             className="relative mb-8 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 overflow-hidden"
@@ -842,7 +606,6 @@ export default function HomePage() {
           <div className="grid lg:grid-cols-2 gap-8 items-start">
             <motion.div 
               className="space-y-5"
-              initial="hidden"
               whileInView="show"
               viewport={{ once: true }}
               variants={container}
@@ -902,7 +665,6 @@ export default function HomePage() {
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               className="relative"
@@ -929,7 +691,6 @@ export default function HomePage() {
                     ].map((src, i) => (
                       <motion.div
                         key={src}
-                        initial={{ opacity: 0, y: 10 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ delay: i * 0.12, duration: 0.45 }}
@@ -973,25 +734,37 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section data-scroll-section="true" className="py-20 px-4 bg-white dark:bg-black">
+      <section data-scroll-section="true" className="py-20 px-4 bg-transparent animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <motion.div 
           data-gsap="v-reveal"
           className="max-w-2xl mx-auto text-center"
-          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
         >
-          <h2 className="text-4xl font-bold text-black dark:text-white mb-6">
+          <motion.h2
+            className="text-4xl font-bold text-black dark:text-white mb-6"
+            whileInView={{ opacity: [0.6, 1], y: [10, 0] }}
+            transition={{ duration: 0.45 }}
+            viewport={{ once: true }}
+          >
             Ready to find your people?
-          </h2>
-          <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
+          </motion.h2>
+          <motion.p
+            className="text-lg text-gray-600 dark:text-gray-400 mb-8"
+            whileInView={{ opacity: [0.4, 1], y: [8, 0] }}
+            transition={{ duration: 0.45, delay: 0.08 }}
+            viewport={{ once: true }}
+          >
             Join thousands discovering real events and real connections.
-          </p>
+          </motion.p>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            animate={{ boxShadow: ['0 8px 20px rgba(239,68,68,0.25)', '0 12px 32px rgba(236,72,153,0.38)', '0 8px 20px rgba(239,68,68,0.25)'] }}
+            transition={{ boxShadow: { duration: 2.8, repeat: Infinity, ease: 'easeInOut' } }}
               onClick={() => router.push('/auth')}
-            className="px-10 py-4 bg-red-500 text-white font-semibold rounded-full text-lg hover:bg-red-600 transition shadow-lg"
+            className="px-10 py-4 niche-animated-gradient bg-gradient-to-r from-red-500 via-pink-500 to-fuchsia-500 text-white font-semibold rounded-full text-lg transition shadow-lg"
           >
             Create Your Account
           </motion.button>
@@ -999,7 +772,7 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer data-gsap="footer-wrap" className="relative py-16 px-4 bg-white dark:bg-black border-t border-gray-200 dark:border-gray-800 overflow-hidden">
+      <footer data-gsap="footer-wrap" className="relative py-16 px-4 bg-transparent border-t border-gray-200 dark:border-gray-800 overflow-hidden animate-in fade-in-0 slide-in-from-bottom-4 duration-700">
         <div data-gsap="v-parallax" className="pointer-events-none absolute -top-12 right-12 h-40 w-40 rounded-full bg-rose-400/15 blur-3xl" />
         <div data-gsap="v-parallax" className="pointer-events-none absolute -bottom-14 left-10 h-44 w-44 rounded-full bg-fuchsia-400/15 blur-3xl" />
 
@@ -1014,9 +787,13 @@ export default function HomePage() {
                 A premium social layer for discovery, compatibility, and local momentum — designed to keep every interaction intentional.
               </p>
               <div className="flex flex-wrap gap-3">
-                <a href="#how" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black text-white dark:bg-white dark:text-black text-sm font-medium hover:opacity-85 transition-opacity">
+                <button
+                  type="button"
+                  onClick={() => scrollToSection('how')}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black text-white dark:bg-white dark:text-black text-sm font-medium hover:opacity-85 transition-opacity"
+                >
                   How it works <ArrowUpRight className="w-4 h-4" />
-                </a>
+                </button>
                 <a href="#" className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gray-300 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 hover:border-red-400 dark:hover:border-red-500 transition-colors">
                   Community guidelines
                 </a>
@@ -1071,6 +848,7 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 }

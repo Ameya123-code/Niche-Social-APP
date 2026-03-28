@@ -119,11 +119,12 @@
 
 body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-  height: 100vh;
+  min-height: 100vh;
   width: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* Integrated app scrollbar styling */
@@ -170,9 +171,57 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+@keyframes niche-float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes niche-gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes niche-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.62;
+    transform: scale(1.08);
+  }
+}
+
+.niche-animated-gradient {
+  background-size: 220% 220%;
+  animation: niche-gradient-shift 10s ease infinite;
+}
+
+.niche-float {
+  animation: niche-float 5.5s ease-in-out infinite;
+}
+
+.niche-glow-pulse {
+  animation: niche-glow-pulse 4.2s ease-in-out infinite;
+}
+
 @layer base {
   html {
-    height: 100vh;
+    min-height: 100%;
+    height: auto;
     width: 100%;
     margin: 0;
     padding: 0;

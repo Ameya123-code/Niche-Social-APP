@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -10,6 +10,9 @@ import {
   MessageCircle,
   Palette,
   WandSparkles,
+  Camera,
+  Plus,
+  Minus,
 } from 'lucide-react';
 import ProfileCard from '@/components/ReactBitsProfileCard';
 
@@ -29,7 +32,7 @@ interface CardUser {
     stickers: string[];
     borderStyle?: 'glass' | 'neon' | 'minimal';
     fontStyle?: 'modern' | 'mono' | 'playful';
-    backgroundMode?: 'theme' | 'gif' | 'image';
+    backgroundMode?: 'theme' | 'gif' | 'image' | 'gradient';
     gifUrl?: string;
     updatedAt: string;
   };
@@ -240,6 +243,18 @@ const toSticker = (value: string) => {
   return emojiByInterest[key] ?? '✨';
 };
 
+/** Decode a gradient stored as JSON (mode=gradient) into a CSS string for innerGradient. */
+const parseGradientCss = (raw?: string): string | undefined => {
+  if (!raw) return undefined;
+  try {
+    const g = JSON.parse(raw) as { type?: string; angle?: number; colors?: string[] };
+    if (g?.type === 'gradient' && Array.isArray(g.colors) && g.colors.length >= 2) {
+      return `linear-gradient(${g.angle ?? 135}deg, ${g.colors.join(', ')})`;
+    }
+  } catch { /* not JSON */ }
+  return undefined;
+};
+
 const clampLevel = (n: number) => Math.max(1, Math.min(5, n));
 
 export default function CardsPage() {
@@ -257,9 +272,15 @@ export default function CardsPage() {
   const [stickerInput, setStickerInput] = useState('');
   const [borderStyle, setBorderStyle] = useState<'glass' | 'neon' | 'minimal'>('glass');
   const [fontStyle, setFontStyle] = useState<'modern' | 'mono' | 'playful'>('modern');
-  const [backgroundMode, setBackgroundMode] = useState<'theme' | 'gif' | 'image'>('theme');
+  const [backgroundMode, setBackgroundMode] = useState<'theme' | 'gif' | 'image' | 'gradient'>('theme');
   const [gifUrl, setGifUrl] = useState('');
+  const [gradientColors, setGradientColors] = useState<string[]>(['#7c3aed', '#ec4899']);
+  const [gradientAngle, setGradientAngle] = useState(135);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [savingDesign, setSavingDesign] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const MAX_INTERESTS = 30;
 
   const openProfileCustomizer = useCallback(() => {
@@ -291,7 +312,26 @@ export default function CardsPage() {
         if (design?.borderStyle) setBorderStyle(design.borderStyle);
         if (design?.fontStyle) setFontStyle(design.fontStyle);
         if (design?.backgroundMode) setBackgroundMode(design.backgroundMode);
-        if (typeof design?.gifUrl === 'string') setGifUrl(design.gifUrl);
+        if (typeof design?.gifUrl === 'string') {
+          if (design.backgroundMode === 'gradient') {
+            // gifUrl stores gradient JSON — parse colors/angle back out
+            try {
+              const g = JSON.parse(design.gifUrl) as { type?: string; colors?: string[]; angle?: number };
+              if (g?.type === 'gradient' && Array.isArray(g.colors) && g.colors.length >= 2) {
+                setGradientColors(g.colors.slice(0, 5));
+                if (typeof g.angle === 'number') setGradientAngle(Math.max(0, Math.min(360, g.angle)));
+              }
+            } catch { /* ignore */ }
+          } else {
+            setGifUrl(design.gifUrl);
+          }
+        }
+        // Load existing profile avatar
+        const meRes = await fetch('/api/users/me', { headers: { Authorization: `Bearer ${token}` } });
+        if (meRes.ok) {
+          const meData = await meRes.json() as { user?: { profileImageUrl?: string | null } };
+          if (meData?.user?.profileImageUrl) setAvatarPreviewUrl(meData.user.profileImageUrl);
+        }
         setIsDesignReady(Boolean(design?.isCustomized));
       } catch {
         /* ignore */
@@ -321,7 +361,9 @@ export default function CardsPage() {
           borderStyle,
           fontStyle,
           backgroundMode,
-          gifUrl,
+          gifUrl: backgroundMode === 'gradient'
+            ? JSON.stringify({ type: 'gradient', angle: gradientAngle, colors: gradientColors })
+            : gifUrl,
         }),
       });
       if (!response.ok) return false;
@@ -331,7 +373,47 @@ export default function CardsPage() {
     } finally {
       setSavingDesign(false);
     }
-  }, [backgroundMode, borderStyle, fontStyle, gifUrl, isDesignReady, myStickers, selectedThemeId]);
+  }, [backgroundMode, borderStyle, fontStyle, gifUrl, gradientAngle, gradientColors, isDesignReady, myStickers, selectedThemeId]);
+
+  /** Upload the pending avatar file, update user profile image, return the stored URL. */
+  const uploadAvatar = useCallback(async (): Promise<string | null> => {
+    if (!avatarFile) return avatarPreviewUrl || null;
+    const token = localStorage.getItem('auth_token');
+    if (!token) return null;
+    setIsUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', avatarFile);
+      const uploadRes = await fetch('/api/uploads/image', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!uploadRes.ok) return null;
+      const { url } = await uploadRes.json() as { url?: string };
+      if (!url) return null;
+      // Persist as profile image
+      await fetch('/api/users/me', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileImageUrl: url }),
+      });
+      setAvatarPreviewUrl(url);
+      setAvatarFile(null);
+      return url;
+    } catch {
+      return null;
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  }, [avatarFile, avatarPreviewUrl]);
+
+  /** Save everything and mark design as ready so swipe feed loads. */
+  const handleFinishSetup = useCallback(async () => {
+    await uploadAvatar();
+    const ok = await saveMyDesign(true);
+    if (ok) setIsDesignReady(true);
+  }, [uploadAvatar, saveMyDesign]);
 
   const fetchCards = useCallback(async () => {
     setLoading(true);
@@ -417,6 +499,57 @@ export default function CardsPage() {
 
             <div>
               <p className="text-xs font-semibold text-gray-500 mb-2 flex items-center gap-2">
+                <Camera className="w-3.5 h-3.5" /> Avatar photo
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="relative flex-shrink-0">
+                  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                    {avatarPreviewUrl ? (
+                      <img src={avatarPreviewUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <Camera className="w-6 h-6 text-gray-400" />
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center shadow"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 leading-snug">
+                    {avatarPreviewUrl ? 'Looking good! Tap to change.' : 'Add a photo to show on your card.'}
+                  </p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">JPG, PNG or WebP · max 5 MB</p>
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="mt-2 px-3 py-1.5 rounded-xl text-xs font-medium border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-rose-400 hover:text-rose-500 transition"
+                  >
+                    Choose photo
+                  </button>
+                </div>
+              </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setAvatarFile(file);
+                  const prev = avatarPreviewUrl;
+                  if (prev?.startsWith('blob:')) URL.revokeObjectURL(prev);
+                  setAvatarPreviewUrl(URL.createObjectURL(file));
+                }}
+              />
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-gray-500 mb-2 flex items-center gap-2">
                 <Palette className="w-3.5 h-3.5" /> Theme
               </p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -479,40 +612,118 @@ export default function CardsPage() {
 
             <div>
               <p className="text-xs font-semibold text-gray-500 mb-2">Background</p>
-              <div className="flex gap-2 mb-2">
-                <button
-                  onClick={() => setBackgroundMode('theme')}
-                  className={`px-3 py-2 rounded-xl text-xs border ${
-                    backgroundMode === 'theme'
-                      ? 'border-rose-500 bg-rose-50 dark:bg-rose-900/20 text-rose-600'
-                      : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'
-                  }`}
-                >
-                  Theme Gradient
-                </button>
-                <button
-                  onClick={() => setBackgroundMode('gif')}
-                  className={`px-3 py-2 rounded-xl text-xs border ${
-                    backgroundMode === 'gif'
-                      ? 'border-rose-500 bg-rose-50 dark:bg-rose-900/20 text-rose-600'
-                      : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'
-                  }`}
-                >
-                  GIF Background
-                </button>
+              <div className="flex gap-1.5 flex-wrap mb-3">
+                {(['theme', 'gradient', 'gif'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setBackgroundMode(mode)}
+                    className={`px-3 py-2 rounded-xl text-xs border transition ${
+                      backgroundMode === mode
+                        ? 'border-rose-500 bg-rose-50 dark:bg-rose-900/20 text-rose-600'
+                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'
+                    }`}
+                  >
+                    {mode === 'theme' ? '🎨 Theme' : mode === 'gradient' ? '🌈 Gradient' : '📽️ GIF / Image'}
+                  </button>
+                ))}
               </div>
+
+              {backgroundMode === 'gradient' && (
+                <div className="space-y-3">
+                  {/* Color stops */}
+                  <div className="space-y-2">
+                    {gradientColors.map((color, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={color}
+                          onChange={(e) => {
+                            const next = [...gradientColors];
+                            next[i] = e.target.value;
+                            setGradientColors(next);
+                          }}
+                          className="w-9 h-9 rounded-lg cursor-pointer border border-gray-200 dark:border-gray-700 p-0.5 bg-white dark:bg-gray-900"
+                        />
+                        <div
+                          className="flex-1 h-9 rounded-lg border border-gray-200 dark:border-gray-700"
+                          style={{ background: color }}
+                        />
+                        {gradientColors.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => setGradientColors(gradientColors.filter((_, idx) => idx !== i))}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {gradientColors.length < 5 && (
+                      <button
+                        type="button"
+                        onClick={() => setGradientColors([...gradientColors, '#ffffff'])}
+                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-rose-500 transition"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add color stop
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Direction */}
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>Direction</span>
+                      <span>{gradientAngle}°</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={360}
+                      value={gradientAngle}
+                      onChange={(e) => setGradientAngle(Number(e.target.value))}
+                      className="w-full accent-rose-500"
+                    />
+                    <div className="flex gap-1.5 mt-1.5">
+                      {([{ label: '→', val: 90 }, { label: '↘', val: 135 }, { label: '↓', val: 180 }, { label: '↗', val: 45 }] as const).map(({ label, val }) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setGradientAngle(val)}
+                          className={`w-8 h-8 rounded-lg text-xs border transition ${
+                            gradientAngle === val
+                              ? 'border-rose-500 text-rose-600 bg-rose-50 dark:bg-rose-900/20'
+                              : 'border-gray-200 dark:border-gray-700 text-gray-500'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Live swatch */}
+                  <div
+                    className="h-10 rounded-xl shadow-inner"
+                    style={{ background: `linear-gradient(${gradientAngle}deg, ${gradientColors.join(', ')})` }}
+                  />
+                </div>
+              )}
+
               {backgroundMode === 'gif' && (
                 <div className="space-y-2">
                   <input
                     value={gifUrl}
                     onChange={(e) => setGifUrl(e.target.value)}
-                    placeholder="Paste GIF URL"
+                    placeholder="Paste GIF or image URL"
                     className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-xs"
                   />
                   <div className="flex flex-wrap gap-2">
                     {QUICK_GIFS.map((gif) => (
                       <button
                         key={gif}
+                        type="button"
                         onClick={() => setGifUrl(gif)}
                         className="px-2 py-1 rounded-lg text-[11px] border border-gray-200 dark:border-gray-700"
                       >
@@ -612,49 +823,43 @@ export default function CardsPage() {
               </div>
             </div>
 
-            <button
-              onClick={openProfileCustomizer}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white font-semibold shadow-lg"
-            >
-              Go to Profile Customizer
-            </button>
+            <div className="space-y-2">
+              <button
+                onClick={handleFinishSetup}
+                disabled={savingDesign || isUploadingAvatar}
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-rose-500 to-fuchsia-500 text-white font-semibold shadow-lg disabled:opacity-60 disabled:cursor-not-allowed transition"
+              >
+                {savingDesign || isUploadingAvatar ? 'Saving…' : 'Save design & start swiping →'}
+              </button>
+              <button
+                onClick={openProfileCustomizer}
+                className="w-full py-2 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 underline-offset-2 hover:underline transition"
+              >
+                Or open full Profile Customizer
+              </button>
+            </div>
           </div>
 
           <div className="rounded-3xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl p-5">
             <p className="text-xs uppercase tracking-[0.12em] text-gray-500 mb-3">Live preview</p>
-            <div
-              className={`rounded-3xl p-5 min-h-[380px] border ${
-                borderStyle === 'neon'
-                  ? 'border-fuchsia-300/80 shadow-[0_0_30px_rgba(217,70,239,0.35)]'
-                  : borderStyle === 'minimal'
-                    ? 'border-white/50'
-                    : 'border-white/20'
-              } ${fontStyle === 'mono' ? 'font-mono' : fontStyle === 'playful' ? 'font-serif' : 'font-sans'} ${
-                backgroundMode === 'gif' && gifUrl ? 'bg-black' : `bg-gradient-to-br ${previewTheme.shell}`
-              }`}
-              style={
-                backgroundMode === 'gif' && gifUrl
-                  ? {
-                      backgroundImage: `linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.55)), url(${gifUrl})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                    }
-                  : undefined
-              }
-            >
-              <h3 className={`text-2xl font-bold ${previewTheme.text}`}>You, 24</h3>
-              <p className="text-white/80 text-sm mt-1">Opinion-first profile</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {previewStickers.map((s, i) => (
-                  <span key={`${s}-${i}`} className="px-3 py-1 rounded-full text-xs bg-black/30 text-white border border-white/20">
-                    {s}
-                  </span>
-                ))}
-              </div>
-              <div className={`mt-5 rounded-2xl border p-4 ${previewTheme.opinion}`}>
-                <p className="text-white text-sm">“I love real conversations, not small talk.”</p>
-              </div>
-            </div>
+            <ProfileCard
+              avatarUrl={avatarPreviewUrl}
+              bannerUrl=""
+              avatarFrame="none"
+              name="You, 24"
+              title="Opinion-first profile — share what you think, not just how you look."
+              handle="you"
+              status="Setting up card"
+              themeId={selectedThemeId}
+              borderStyle={borderStyle}
+              fontStyle={fontStyle}
+              backgroundMode={backgroundMode === 'gif' || backgroundMode === 'image' ? backgroundMode : 'theme'}
+              gifUrl={backgroundMode === 'gif' ? gifUrl : undefined}
+              innerGradient={backgroundMode === 'gradient' ? `linear-gradient(${gradientAngle}deg, ${gradientColors.join(', ')})` : undefined}
+              enableTilt={false}
+              showUserInfo={false}
+              interests={previewStickers}
+            />
           </div>
         </div>
       </div>
@@ -793,7 +998,8 @@ export default function CardsPage() {
                   borderStyle={displayedBorderStyle}
                   fontStyle={displayedFontStyle}
                   backgroundMode={displayedBackgroundMode === 'gif' || displayedBackgroundMode === 'image' ? displayedBackgroundMode : 'theme'}
-                  gifUrl={displayedGifUrl}
+                  gifUrl={displayedBackgroundMode === 'gif' || displayedBackgroundMode === 'image' ? displayedGifUrl : undefined}
+                  innerGradient={displayedBackgroundMode === 'gradient' ? parseGradientCss(displayedGifUrl) : undefined}
                   enableTilt={false}
                   showUserInfo={true}
                   contactText="Connect"

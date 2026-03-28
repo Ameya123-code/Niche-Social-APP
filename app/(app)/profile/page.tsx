@@ -3,7 +3,6 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import { Settings, Pencil, LogOut, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 // Stores
 import { useProfileStore, type GlobalProfile } from '@/store/profile';
@@ -170,7 +169,7 @@ export default function ProfilePage() {
   const handleSave = useCallback(
     async (patch: { global?: Partial<GlobalProfile> }) => {
       const token = localStorage.getItem('auth_token');
-      if (!token) return;
+      if (!token || !authUser) return;
       setIsSaving(true);
       try {
         const res = await fetch('/api/users/me/profile', {
@@ -180,10 +179,54 @@ export default function ProfilePage() {
           body: JSON.stringify(patch),
         });
         if (!res.ok) throw new Error('Failed to save profile');
+        const data = await res.json() as {
+          profile?: {
+            global?: GlobalProfile;
+            contexts?: Record<string, import('@/store/profile').ProfileContextData>;
+          };
+        };
+
+        const savedGlobal = data?.profile?.global;
+        if (savedGlobal) {
+          loadProfile({
+            userId: authUser.id,
+            global: savedGlobal,
+            contexts: data.profile?.contexts ?? {},
+          });
+
+          if (savedGlobal.theme?.primary && savedGlobal.theme?.accent) {
+            setTheme({ primary: savedGlobal.theme.primary, accent: savedGlobal.theme.accent });
+          }
+        }
+
+        const mirroredPatch: { profileImageUrl?: string; selfDescription?: string } = {};
+        if (typeof patch.global?.avatar === 'string') mirroredPatch.profileImageUrl = patch.global.avatar;
+        if (typeof patch.global?.bio === 'string') mirroredPatch.selfDescription = patch.global.bio;
+
+        if (Object.keys(mirroredPatch).length > 0) {
+          const userRes = await fetch('/api/users/me', {
+            method: 'PUT',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            cache: 'no-store',
+            body: JSON.stringify(mirroredPatch),
+          });
+
+          if (userRes.ok) {
+            const userData = await userRes.json() as {
+              user?: AuthUser & { selfDescription?: string | null; profileImageUrl?: string | null };
+            };
+            if (userData.user) {
+              setAuthUser((prev) => prev ? {
+                ...prev,
+                ...userData.user,
+              } : userData.user);
+            }
+          }
+        }
       } catch { /* ignore */ }
       finally { setIsSaving(false); }
     },
-    [setIsSaving]
+    [authUser, loadProfile, setAuthUser, setIsSaving, setTheme]
   );
 
   const parseHashtags = (s: string) => { try { return JSON.parse(s) as string[]; } catch { return [] as string[]; } };
@@ -257,7 +300,7 @@ export default function ProfilePage() {
       >
 
         {/* Top bar */}
-        <div className="mx-auto w-full max-w-7xl px-5 pt-8 pb-3">
+        <div className="relative z-30 mx-auto w-full max-w-7xl px-5 pt-8 pb-3">
           <div className="rounded-2xl border border-white/10 bg-black/35 backdrop-blur-md px-4 py-3 flex items-center justify-between">
             <div>
               <h1 className="text-xl md:text-2xl font-extrabold text-white">Profile</h1>
@@ -272,9 +315,13 @@ export default function ProfilePage() {
                 <Pencil className="w-3.5 h-3.5" />
                 Edit Profile &amp; Card
               </button>
-              <Link href="/settings" className="p-2 rounded-xl hover:bg-white/10 transition">
+              <button
+                type="button"
+                onClick={() => router.push('/settings')}
+                className="p-2 rounded-xl hover:bg-white/10 transition"
+              >
                 <Settings className="w-5 h-5 text-white/75" />
-              </Link>
+              </button>
               <button onClick={handleLogout} className="p-2 rounded-xl hover:bg-white/10 transition">
                 <LogOut className="w-5 h-5 text-white/75" />
               </button>
