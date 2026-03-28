@@ -12,6 +12,16 @@ export interface User {
   createdAt: Date;
   updatedAt: Date;
   lastPhotosBlockedAt?: Date; // Photo visibility timer
+
+  // Location (used for matching & event suggestions)
+  latitude?: number | null;
+  longitude?: number | null;
+  city?: string | null;
+  country?: string | null;
+
+  // Age preference range for matching
+  ageMin?: number | null;
+  ageMax?: number | null;
 }
 
 export interface UserPreferences {
@@ -116,6 +126,61 @@ export interface Card {
   preferences: UserPreferences;
   mutualInterests: string[];
   compatibilityScore: number; // 0-100
+}
+
+// ─── Chat & Conversation Types ────────────────────────────────────────────────
+
+export type ChatFeature =
+  | 'text'
+  | 'emoji'
+  | 'gif'
+  | 'image'
+  | 'video'
+  | 'voice_call'
+  | 'video_call'
+  | 'event_suggestion';
+
+export type MessageType = 'text' | 'emoji' | 'gif' | 'image' | 'video' | 'voice_note' | 'system';
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  sender: { id: string; name: string; profileImageUrl?: string | null };
+  type: MessageType;
+  content: string;
+  xpAwarded: number;
+  createdAt: Date;
+}
+
+export interface ConversationPartner {
+  id: string;
+  name: string;
+  profileImageUrl?: string | null;
+  age: number;
+  city?: string | null;
+}
+
+export interface Conversation {
+  id: string;
+  partner: ConversationPartner;
+  level: number;
+  totalXp: number;
+  unlockedFeatures: ChatFeature[];
+  lastMessage?: ChatMessage | null;
+  lastMessageAt?: Date | null;
+  createdAt: Date;
+}
+
+export interface ChatLevelInfo {
+  level: number;
+  totalXp: number;
+  nextLevel: { level: number; xpNeeded: number } | null;
+  unlockedFeatures: ChatFeature[];
+  nextUnlock: { feature: ChatFeature; atLevel: number } | null;
+  eventSuggestionEligible: boolean;
+  myXpToday: number;
+  myXpThisHour: number;
 }
 
 // Search Types

@@ -27,6 +27,12 @@ export async function GET(request: NextRequest) {
         selfDescription: true,
         profileImageUrl: true,
         isAgeVerified: true,
+        latitude: true,
+        longitude: true,
+        city: true,
+        country: true,
+        ageMin: true,
+        ageMax: true,
         createdAt: true,
         preferences: true,
         opinions: {
@@ -51,7 +57,7 @@ export async function PUT(request: NextRequest) {
     if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
-    const { name, birthDate, selfDescription, profileImageUrl } = body;
+    const { name, birthDate, selfDescription, profileImageUrl, latitude, longitude, city, country, ageMin, ageMax } = body;
 
     const derivedAge = birthDate ? getAgeFromBirthDate(new Date(birthDate)) : undefined;
 
@@ -63,6 +69,12 @@ export async function PUT(request: NextRequest) {
         ...(derivedAge !== undefined && { age: derivedAge }),
         ...(selfDescription !== undefined && { selfDescription }),
         ...(profileImageUrl !== undefined && { profileImageUrl }),
+        ...(latitude !== undefined && { latitude }),
+        ...(longitude !== undefined && { longitude }),
+        ...(city !== undefined && { city }),
+        ...(country !== undefined && { country }),
+        ...(ageMin !== undefined && { ageMin }),
+        ...(ageMax !== undefined && { ageMax }),
       },
       select: {
         id: true,
@@ -72,6 +84,12 @@ export async function PUT(request: NextRequest) {
         selfDescription: true,
         profileImageUrl: true,
         isAgeVerified: true,
+        latitude: true,
+        longitude: true,
+        city: true,
+        country: true,
+        ageMin: true,
+        ageMax: true,
       },
     });
 

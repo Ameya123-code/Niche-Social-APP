@@ -26,6 +26,16 @@ model User {
   updatedAt             DateTime  @updatedAt
   lastPhotosBlockedAt   DateTime?
 
+  // Location (used for matching & event suggestions)
+  latitude              Float?
+  longitude             Float?
+  city                  String?
+  country               String?
+
+  // Age preference range for matching
+  ageMin                Int?      // e.g. 18
+  ageMax                Int?      // e.g. 30
+
   // Relations
   preferences           UserPreferences?
   opinions              UserOpinion[]
@@ -41,6 +51,10 @@ model User {
   verificationTokens    VerificationToken[]
   profile               UserProfile?
   cardDesign            UserCardDesign?
+  conversationsAsA      Conversation[]  @relation("userAConversations")
+  conversationsAsB      Conversation[]  @relation("userBConversations")
+  sentMessages          Message[]
+  xpRecords             UserConversationXp[]
 
   @@index([email])
   @@index([createdAt])
@@ -272,4 +286,75 @@ model Report {
   @@index([reportedUserId])
   @@index([status])
   @@index([severity])
+}
+
+// ─── Chat System ─────────────────────────────────────────────────────────────
+
+// A conversation between two mutually-matched users
+model Conversation {
+  id            String    @id @default(cuid())
+  // Always stored with lexicographically-smaller userId as userAId (enforced in app)
+  userAId       String
+  userBId       String
+  userA         User      @relation("userAConversations", fields: [userAId], references: [id], onDelete: Cascade)
+  userB         User      @relation("userBConversations", fields: [userBId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastMessageAt DateTime?
+
+  messages      Message[]
+  level         ChatLevel?
+  xpRecords     UserConversationXp[]
+
+  @@unique([userAId, userBId])
+  @@index([userAId])
+  @@index([userBId])
+  @@index([lastMessageAt])
+}
+
+// Individual messages in a conversation
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  // text | gif | image | video | voice_note | system
+  type           String       @default("text")
+  content        String       // Text content, URL, or system message
+  xpAwarded      Int          @default(0)
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+}
+
+// Shared conversation level (both users contribute XP to the same level pool)
+model ChatLevel {
+  id             String       @id @default(cuid())
+  conversationId String       @unique
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  level          Int          @default(1)
+  totalXp        Int          @default(0)
+  updatedAt      DateTime     @updatedAt
+
+  @@index([conversationId])
+}
+
+// Per-user anti-spam XP tracking for each conversation
+model UserConversationXp {
+  id             String       @id @default(cuid())
+  userId         String
+  conversationId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  xpThisHour     Int          @default(0)
+  xpToday        Int          @default(0)
+  lastMessageAt  DateTime?
+  lastResetHour  DateTime     @default(now())
+  lastResetDay   DateTime     @default(now())
+  recentMessages String       @default("[]") // JSON: last 5 message contents for duplicate detection
+
+  @@unique([userId, conversationId])
+  @@index([userId, conversationId])
 }
