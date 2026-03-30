@@ -15,17 +15,12 @@ export async function GET(request: NextRequest) {
       where: { id: authUser.userId },
       select: {
         id: true,
-        isEmailVerified: true,
         isAgeVerified: true,
       },
     });
 
     if (!user) {
       return NextResponse.json({ error: 'Session invalid' }, { status: 401 });
-    }
-
-    if (!user.isEmailVerified) {
-      return NextResponse.json({ error: 'Email not verified', requiresVerification: true }, { status: 403 });
     }
 
     if (!user.isAgeVerified) {

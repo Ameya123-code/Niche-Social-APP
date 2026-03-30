@@ -105,7 +105,7 @@ export default function VerifyPage() {
   const streamRef = useRef<MediaStream | null>(null);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-  const allVerified = useMemo(() => Boolean(user?.isEmailVerified && user?.isAgeVerified), [user]);
+  const allVerified = useMemo(() => Boolean(user?.isAgeVerified), [user]);
 
   useEffect(() => {
     if (!token) router.replace('/auth');
@@ -343,7 +343,7 @@ export default function VerifyPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-black dark:text-white">Verify your identity</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Secure your account with email + OpenCV-assisted age verification</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Complete age verification to continue</p>
           </div>
         </div>
 
@@ -351,7 +351,7 @@ export default function VerifyPage() {
           {[
             { label: 'Email', ok: user?.isEmailVerified, hint: user?.email || 'Pending email verification' },
             { label: 'Age', ok: user?.isAgeVerified, hint: user?.isAgeVerified ? 'Verified' : 'Camera check required' },
-            { label: 'Status', ok: allVerified, hint: allVerified ? 'Ready for discover' : 'Complete all required checks' },
+            { label: 'Status', ok: allVerified, hint: allVerified ? 'Ready for discover' : 'Complete age verification' },
           ].map((item) => (
             <div key={item.label} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/5 p-3">
               <div className="flex items-center justify-between gap-2">

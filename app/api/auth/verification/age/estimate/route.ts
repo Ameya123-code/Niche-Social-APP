@@ -48,7 +48,7 @@ async function readImageBytesFromRequest(request: NextRequest): Promise<{ bytes:
 }
 
 // POST /api/auth/verification/age/estimate
-// Prototype-only age estimate using face-age model API (with deterministic fallback).
+// Prototype-only 18+ classification using face-age model API (with deterministic fallback).
 export async function POST(request: NextRequest) {
   try {
     const authUser = getUserFromRequest(request);
@@ -69,8 +69,8 @@ export async function POST(request: NextRequest) {
 
     const estimate = await estimateAgeFromFaceImage(image.bytes, image.mimeType);
 
-    // Prototype rule: only mark as verified when model confidence is moderate.
-    const markVerified = estimate.isLikelyAdult && estimate.confidence >= 0.55;
+    const isAbove18 = estimate.estimatedAge >= 18;
+    const markVerified = isAbove18;
 
     await prisma.user.update({
       where: { id: authUser.userId },
@@ -82,8 +82,15 @@ export async function POST(request: NextRequest) {
         verification: {
           status: markVerified ? 'verified' : 'not_verified',
           isAgeVerified: markVerified,
+          isAbove18,
+          thresholdAge: 18,
         },
-        estimate,
+        result: {
+          isAbove18,
+          thresholdAge: 18,
+          confidence: estimate.confidence,
+          provider: estimate.provider,
+        },
       },
       { status: 200 },
     );

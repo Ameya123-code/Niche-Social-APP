@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { generateToken, hashPassword } from '@/lib/auth';
-import { generateSixDigitCode, getExpiryDate, VERIFICATION_TYPES } from '@/lib/verification';
-import { isEmailProviderConfigured, sendEmailVerificationCode } from '@/lib/email';
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -76,6 +74,7 @@ export async function POST(request: Request) {
         phone,
         name,
         age,
+        isAgeVerified: true,
         password: hashedPassword,
         selfDescription,
         profileImageUrl,
@@ -99,41 +98,11 @@ export async function POST(request: Request) {
 
     const token = generateToken({ userId: user.id, email: user.email, isEmailVerified: user.isEmailVerified });
 
-    const verificationCode = generateSixDigitCode();
-    await prisma.verificationToken.create({
-      data: {
-        userId: user.id,
-        type: VERIFICATION_TYPES.EMAIL_VERIFY,
-        code: verificationCode,
-        expiresAt: getExpiryDate(15),
-      },
-    });
-
-    const emailConfigured = isEmailProviderConfigured();
-    let emailVerificationSent = emailConfigured;
-    let devVerificationCode: string | null = null;
-    try {
-      if (emailConfigured) {
-        await sendEmailVerificationCode(user.email, verificationCode);
-      } else if (process.env.NODE_ENV !== 'production') {
-        devVerificationCode = verificationCode;
-      }
-    } catch {
-      emailVerificationSent = false;
-      if (process.env.NODE_ENV !== 'production') {
-        devVerificationCode = verificationCode;
-      }
-    }
-
     return NextResponse.json(
       {
-        message: emailVerificationSent
-          ? 'Account created successfully. Verification code sent to your email.'
-          : 'Account created successfully. Verification email could not be sent right now.',
+        message: 'Account created successfully.',
         token,
         user,
-        emailVerificationSent,
-        ...(devVerificationCode ? { devVerificationCode } : {}),
       },
       { status: 201 }
     );

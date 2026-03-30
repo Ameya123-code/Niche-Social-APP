@@ -48,7 +48,9 @@ export function extractTokenFromHeader(authHeader?: string): string | null {
 
 export function getUserFromRequest(request: NextRequest): AuthTokenPayload | null {
   const authHeader = request.headers.get('authorization') || request.headers.get('Authorization') || '';
-  const token = extractTokenFromHeader(authHeader);
+  const headerToken = extractTokenFromHeader(authHeader);
+  const cookieToken = request.cookies.get('auth_token')?.value || null;
+  const token = headerToken || cookieToken;
   if (!token) return null;
   return verifyToken(token);
 }

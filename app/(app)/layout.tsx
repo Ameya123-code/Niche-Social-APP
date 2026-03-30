@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Heart, Map, Search, User, MessageCircle } from 'lucide-react';
 import ThemeToggle from '@/app/components/ThemeToggle';
 import LikeNotificationPopup from '@/app/components/LikeNotificationPopup';
+import Dock from '@/components/Dock';
 
 const NAV = [
   { href: '/cards', icon: Heart, label: 'Discover' },
@@ -20,7 +20,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
-  const [checkingSession, setCheckingSession] = useState(true);
+  const [checkingSession, setCheckingSession] = useState(false);
 
   useEffect(() => {
     const validateSession = async () => {
@@ -31,25 +31,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Render immediately, then validate in background to avoid blocking UI.
+      setCheckingSession(false);
+
       const now = Date.now();
       const lastCheckRaw = sessionStorage.getItem('last_session_check_ms');
       const lastCheck = lastCheckRaw ? Number(lastCheckRaw) : 0;
 
       // Throttle DB validation checks to avoid performance overhead on each navigation.
-      if (lastCheck && now - lastCheck < 120000) {
-        setCheckingSession(false);
+      if (lastCheck && now - lastCheck < 600000) {
         return;
       }
 
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 1200);
+
         const response = await fetch('/api/auth/session', {
           headers: { Authorization: `Bearer ${token}` },
           cache: 'no-store',
+          signal: controller.signal,
         });
+
+        clearTimeout(timeout);
 
         if (response.status === 200) {
           sessionStorage.setItem('last_session_check_ms', String(now));
-          setCheckingSession(false);
           return;
         }
 
@@ -62,8 +69,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         document.cookie = 'auth_token=; path=/; max-age=0';
         router.replace('/auth');
       } catch {
-        // Fail open for transient network issues to keep UX responsive.
-        setCheckingSession(false);
+        // Fail open for transient network issues/timeouts to keep UX responsive.
       }
     };
 
@@ -114,46 +120,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 }
 
 function BottomNav() {
+  const router = useRouter();
   const pathname = usePathname();
-  const reduceMotion = useReducedMotion();
+  const dockItems = NAV.map(({ href, icon: Icon, label }) => {
+    const active = pathname === href || pathname.startsWith(href + '/');
+    return {
+      label,
+      onClick: () => router.push(href),
+      className: active ? 'dock-item-active' : '',
+      icon: (
+        <Icon
+          className={`w-5 h-5 transition-colors ${active ? 'text-rose-500' : 'text-gray-500 dark:text-gray-300'}`}
+          fill={active && href === '/cards' ? 'currentColor' : 'none'}
+        />
+      ),
+    };
+  });
+
   return (
     <nav className="fixed bottom-0 left-0 w-full bg-white dark:bg-black border-t border-gray-100 dark:border-gray-900 z-50">
-      <div className="flex">
-        {NAV.map(({ href, icon: Icon, label }) => {
-          const active = pathname === href || pathname.startsWith(href + '/');
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors ${
-                active
-                  ? 'text-red-500'
-                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
-              }`}
-            >
-              <motion.div
-                animate={reduceMotion ? undefined : { y: active ? -1 : 0, scale: active ? 1.08 : 1 }}
-                transition={{ type: 'spring', stiffness: 420, damping: 28, mass: 0.8 }}
-                className="relative"
-              >
-                <Icon
-                  className="w-6 h-6"
-                  fill={active && href === '/cards' ? 'currentColor' : 'none'}
-                />
-                {active ? (
-                  <motion.span
-                    layoutId="active-nav-dot"
-                    className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-red-500"
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                ) : null}
-              </motion.div>
-              <span className={`text-[10px] font-semibold transition-colors ${active ? 'text-red-500' : ''}`}>
-                {label}
-              </span>
-            </Link>
-          );
-        })}
+      <div className="py-1 px-2 flex justify-center overflow-x-auto no-scrollbar">
+        <Dock
+          items={dockItems}
+          panelHeight={62}
+          dockHeight={220}
+          baseItemSize={46}
+          magnification={64}
+          distance={160}
+          spring={{ mass: 0.14, stiffness: 170, damping: 14 }}
+        />
       </div>
     </nav>
   );
