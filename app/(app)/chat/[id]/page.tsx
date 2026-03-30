@@ -282,14 +282,14 @@ export default function ChatDetailPage() {
 
   if (loading || !conversation) {
     return (
-      <div className="h-screen flex items-center justify-center bg-white dark:bg-black">
+      <div className="h-screen flex items-center justify-center bg-transparent">
         <div className="w-10 h-10 rounded-full border-4 border-rose-500 border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-white dark:bg-black flex flex-col">
+    <div className="h-screen bg-transparent flex flex-col">
       <header className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center gap-3">
         <button onClick={() => router.push('/chat')} className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10">
           <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-200" />

@@ -78,7 +78,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-col w-full h-full bg-white dark:bg-black">
+    <div className="flex flex-col w-full h-full bg-transparent">
       {/* Header */}
       <div className="px-5 sm:px-6 lg:px-8 pt-4 pb-4 flex items-center gap-3 border-b border-gray-100 dark:border-gray-900">
         <Link href="/profile" className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition">

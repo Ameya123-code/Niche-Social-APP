@@ -76,7 +76,7 @@ export default function MapPage() {
   }).length;
 
   return (
-    <div className="flex flex-col w-full h-full bg-white dark:bg-black">
+    <div className="flex flex-col w-full h-full bg-transparent">
       {/* Header */}
       <div className="px-5 sm:px-6 lg:px-8 pt-4 pb-3 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">

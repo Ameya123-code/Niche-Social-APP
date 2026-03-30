@@ -50,7 +50,7 @@ export default function ChatListPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black px-4 sm:px-6 lg:px-8 py-4">
+    <div className="min-h-screen bg-transparent px-4 sm:px-6 lg:px-8 py-4">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <div>

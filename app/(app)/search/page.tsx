@@ -78,7 +78,7 @@ export default function SearchPage() {
   const parseHashtags = (s: string) => { try { return JSON.parse(s) as string[]; } catch { return []; } };
 
   return (
-    <div className="flex flex-col w-full h-full bg-white dark:bg-black">
+    <div className="flex flex-col w-full h-full bg-transparent">
       {/* Header */}
       <div className="px-5 sm:px-6 lg:px-8 pt-4 pb-4 flex-shrink-0">
         <h1 className="text-2xl font-bold text-black dark:text-white mb-4">Search</h1>

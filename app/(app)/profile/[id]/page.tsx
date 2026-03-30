@@ -62,7 +62,7 @@ export default function UserProfilePage() {
   if (!profile) return <div className="flex flex-col items-center justify-center h-screen gap-4"><p className="text-gray-500">User not found</p><Link href="/cards" className="text-red-500">← Back</Link></div>;
 
   return (
-    <div className="w-full h-full bg-white dark:bg-black pb-10">
+    <div className="w-full h-full bg-transparent pb-10">
       {/* Header */}
       <div className="relative h-48 bg-gradient-to-br from-red-100 to-pink-200 dark:from-gray-800 dark:to-gray-700">
         <Link href="/cards" className="absolute top-12 left-4 w-10 h-10 bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center">

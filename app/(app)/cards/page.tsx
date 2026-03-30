@@ -963,7 +963,7 @@ export default function CardsPage() {
       : [...interests, ...opinionTags].filter(Boolean).slice(0, 8);
 
   return (
-    <div className="flex flex-col w-full h-full bg-white dark:bg-black select-none">
+    <div className="flex flex-col w-full h-full bg-transparent select-none">
       <div className="px-5 sm:px-6 lg:px-8 pt-4 pb-3">
         <h1 className="text-2xl font-bold text-black dark:text-white">Opinion Discover</h1>
         <p className="text-sm text-gray-500">{cards.length} {cards.length === 1 ? 'person' : 'people'} in your queue</p>
