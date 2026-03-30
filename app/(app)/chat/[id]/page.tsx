@@ -290,7 +290,7 @@ export default function ChatDetailPage() {
 
   return (
     <div className="h-screen bg-transparent flex flex-col">
-      <header className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center gap-3">
+      <header className="px-4 py-3 border-b border-white/10 dark:border-white/5 flex items-center gap-3 bg-transparent backdrop-blur-sm">
         <button onClick={() => router.push('/chat')} className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10">
           <ArrowLeft className="w-5 h-5 text-gray-700 dark:text-gray-200" />
         </button>
@@ -330,13 +330,13 @@ export default function ChatDetailPage() {
         </div>
       </header>
 
-      <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-900 flex items-center gap-2 text-xs text-gray-500">
+      <div className="px-4 py-2 border-b border-white/10 dark:border-white/5 flex items-center gap-2 text-xs text-gray-500 bg-transparent">
         <Zap className="w-3.5 h-3.5 text-rose-500" />
         Unlocked: {conversation.unlockedFeatures.join(', ') || 'text'}
       </div>
 
       {callHint ? (
-        <div className="px-4 py-2 text-xs border-b border-gray-100 dark:border-gray-900 bg-blue-50/70 dark:bg-blue-950/30 text-blue-700 dark:text-blue-200">
+        <div className="px-4 py-2 text-xs border-b border-white/10 dark:border-white/5 bg-blue-500/10 backdrop-blur-sm text-blue-700 dark:text-blue-200">
           {callHint}
         </div>
       ) : null}
@@ -379,7 +379,7 @@ export default function ChatDetailPage() {
         })}
       </main>
 
-      <form onSubmit={submit} className="p-3 border-t border-gray-200 dark:border-gray-800">
+      <form onSubmit={submit} className="p-3 border-t border-white/10 dark:border-white/5 bg-transparent backdrop-blur-sm">
         {xpHint ? (
           <p className="text-[11px] mb-1 text-amber-500">No XP: {xpHint}</p>
         ) : null}
