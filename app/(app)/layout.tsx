@@ -7,6 +7,7 @@ import { Heart, Map, Search, User, MessageCircle } from 'lucide-react';
 import ThemeToggle from '@/app/components/ThemeToggle';
 import LikeNotificationPopup from '@/app/components/LikeNotificationPopup';
 import Dock from '@/components/Dock';
+import Silk from '@/components/Silk';
 
 const NAV = [
   { href: '/cards', icon: Heart, label: 'Discover' },
@@ -21,6 +22,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
   const [checkingSession, setCheckingSession] = useState(false);
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
 
   useEffect(() => {
     const validateSession = async () => {
@@ -76,6 +78,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     validateSession();
   }, [router]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    const updateTheme = () => setIsDarkTheme(root.classList.contains('dark'));
+
+    updateTheme();
+
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, []);
+
   if (checkingSession) {
     return (
       <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center">
@@ -85,8 +99,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-black overflow-hidden">
-      <div className="w-full relative h-full flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-zinc-50 via-white to-rose-50 dark:from-black dark:via-zinc-950 dark:to-zinc-900 overflow-hidden relative">
+      <div className="fixed inset-0 z-0 opacity-60 dark:opacity-45 pointer-events-none">
+        <Silk
+          speed={3.4}
+          scale={0.95}
+          color={isDarkTheme ? '#7c3aed' : '#1e3a8a'}
+          noiseIntensity={1.1}
+          rotation={0.12}
+        />
+      </div>
+      <div className="w-full relative h-full flex flex-col z-10">
         <motion.header
           initial={reduceMotion ? undefined : { y: -8, opacity: 0 }}
           animate={reduceMotion ? undefined : { y: 0, opacity: 1 }}
